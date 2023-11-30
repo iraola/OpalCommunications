@@ -1,6 +1,7 @@
 {
     "global-properties":{
         "label": "edge1",
+        "udp-sensors-indexes": 2,
         "comms":{
             "udp": {
                 "ip": "0.0.0.0",
@@ -8,8 +9,16 @@
                     "21002": []
                 }
             },
-            "tcp": {
-                "9080": []
+            "tcp_sensors": {
+                "ip": "0.0.0.0",
+                "ports": {
+                    "11002": []
+                }
+            },
+            "tcp_actuators": {
+                "ports": {
+                    "31002": []
+                }
             }
         },
         "funcs": {
@@ -31,40 +40,6 @@
             ]
         }
     },
-
-    "funcs":[
-        {
-            "label": "VoltLimitation",
-            "lang": "Java",
-            "method_name": "es.bsc.hp2c.edge.funcs.VoltLimitation",
-            "parameters": {
-                "sensors": ["Voltmeter Gen1"],
-                "actuators": ["Switch Gen1"],
-                "other": [250]
-            },
-            "trigger": {
-                "type": "onRead",
-                "method_name": "es.bsc.hp2c.edge.HP2Cedge.onRead",
-                "parameters": ["Voltmeter Gen1"]
-            }
-
-        },
-        {
-            "label": "CalcPower",
-            "lang": "Python",
-            "method_name": "es.bsc.hp2c.edge.funcs.CalcPower",
-            "parameters": {
-                "sensors": ["Voltmeter Gen1", "Ammeter Gen1"],
-                "actuators": [],
-                "other": []
-            },
-            "trigger": {
-                "type": "onFrequency",
-                "method_name": "es.bsc.hp2c.edge.HP2Cedge.onFrequency",
-                "parameters": [10]
-            }
-        }
-    ],
 
     "devices": [
         {
@@ -98,7 +73,7 @@
                 "y":0
             },
             "properties": {
-                "indexes": [2]
+                "indexes": [2,3,4]
             }
         },
         {
@@ -109,7 +84,41 @@
                 "y":0
             },
             "properties": {
-                "indexes": [3]
+                "indexes": [5,6]
+            }
+        }
+    ],
+
+    "funcs":[
+        {
+            "label": "VoltLimitation",
+            "lang": "Java",
+            "method_name": "es.bsc.hp2c.edge.funcs.VoltLimitation",
+            "parameters": {
+                "sensors": ["Voltmeter Gen1"],
+                "actuators": ["Switch Gen1"],
+                "other": [250]
+            },
+            "trigger": {
+                "type": "onRead", 
+                "method_name": "es.bsc.hp2c.edge.HP2Cedge.onRead",
+                "parameters": ["Voltmeter Gen1"]
+            }
+
+        },
+        {
+            "label": "CalcPower",
+            "lang": "Python",
+            "method_name": "es.bsc.hp2c.edge.funcs.CalcPower",
+            "parameters": {
+                "sensors": ["Voltmeter Gen1", "Ammeter Gen1"],
+                "actuators": [],
+                "other": []
+            },
+            "trigger": {
+                "type": "onFrequency",
+                "method_name": "es.bsc.hp2c.edge.HP2Cedge.onFrequency",
+                "parameters": [10] 
             }
         }
     ]
