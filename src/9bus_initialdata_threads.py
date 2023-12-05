@@ -85,7 +85,7 @@ def actualitzar_dades(nom):
 # Iniciem els threads d'enviament pels diferents sockets que hem creat
 threads = []
 for clau, objecte in objectes_socket_tcp.items():
-    thread = threading.Thread(target=enviar_dades_thread, args=(objecte))
+    thread = threading.Thread(target=enviar_dades_thread, args=(objecte,))
     thread.start()
     threads.append(thread)
 
