@@ -6,8 +6,12 @@ class socketTCP:
         self.M = M
         self.CD = CD
         self.nom = nom
+        """
         self.portClient = int(f"2{M}{CD:02}3")
         self.portServer = int(f"2{M}{CD:02}4")
+        """
+        self.portClient = 21002
+        self.portServer = 31002
         self.socketDE = None
 
     # Funcio que es fa servir per obrir el socket (en els ports que escollim) i connectar-se al servidor.
@@ -56,6 +60,9 @@ class socketTCP:
                 self.socketDE = None
                 # Espera abans de tornar a intentar la connexió
                 print(f'Esperant abans de tornar a intentar la connexió a {self.nom}...')
+                time.sleep(5)  # Canvia a la quantitat de temps entre reintents
+                continue
+            break  # Si arriba aquí, la connexió és exitosa i surt del bucle
                 time.sleep(5)  # Canvia a la quantitat de temps entre reintents
                 continue
             break  # Si arriba aquí, la connexió és exitosa i surt del bucle

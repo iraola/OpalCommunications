@@ -1,3 +1,4 @@
+import struct
 import time
 from socketTCP import socketTCP
 import threading
@@ -31,25 +32,36 @@ diccionariDE = {'DE1': (1, 1, 1), 'DE2': (1, 2, 1), 'DE3': (1, 3, 1), 'DE4': (2,
 # Crear instàncies de socketTCP
 print("Les dades seran enviades a través dels següents ports:\n")
 objectes_socket_tcp = {}
-for clau, valor in diccionariDE.items():
+
+"""for clau, valor in diccionariDE.items():
     if valor[2] == 1:
         M, CD, _ = valor
         objecte = socketTCP(M, CD, clau)
         objectes_socket_tcp[clau] = objecte
-        print(f"Clau: {clau}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")
+        print(f"Clau: {clau}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")"""
+
+objecte = socketTCP(0,0,"DE1")
+objectes_socket_tcp["DE1"] = objecte
+
 
 # Funció per aplicar threading a l'enviament de dades
 def enviar_dades_thread(objecte, data_dict):
+    dades_a_enviar = b''
     while True:
         objecte.check_and_reconnect()
         if objecte.nom in data_dict:
-            dades_a_enviar = ','.join(map(str, data_dict[objecte.nom]))
-            objecte.enviar_dades_tcp(dades_a_enviar.encode())
-        time.sleep(10)
+            #dades_a_enviar = ','.join(map(str, data_dict[objecte.nom]))
+            # dades_a_enviar = data_dict[obj]
+            for f_value in data_dict[objecte.nom]:
+                dades_a_enviar += struct.pack('f', float(f_value))
+            objecte.enviar_dades_tcp(struct.pack('!I', len(dades_a_enviar)))
+            objecte.enviar_dades_tcp(dades_a_enviar)
+            objecte.enviar_dades_tcp(b'\n')
+
 
 # Diccionari per fer proves d'enviament de dades.
 # Serà substituit per les dades exretes d'hypersim.
-data_dict = {'DE1': ['1.04', ''], 'DE2': ['163000000', '1.025'], 
+data_dict = {'DE1': ['1.04', '1.0', '0.0', '1.0', '7.0'], 'DE2': ['163000000', '1.025'], 
     'DE3': ['85000000', '1.025'], 'DE4': ['125000000', '50000000'], 
     'DE5': ['90000000', '30000000'], 'DE6': ['100000000', '35000000'], 
     'DE16': [1.0, 1.0, 1.0], 'DE17': [1.0, 1.0, 1.0], 'DE18': [1.0, 1.0, 1.0]}
