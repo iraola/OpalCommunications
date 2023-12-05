@@ -2,16 +2,10 @@ import socket
 import time
 
 class socketTCP:
-    def __init__(self, M, CD, nom):
-        self.M = M
-        self.CD = CD
-        self.nom = nom
-        """
-        self.portClient = int(f"2{M}{CD:02}3")
-        self.portServer = int(f"2{M}{CD:02}4")
-        """
-        self.portClient = 21002
-        self.portServer = 31002
+    def __init__(self, port, nom):
+        self.nom = nom #SM1, Ld1, Cb1
+        self.portClient = int(port) - 1
+        self.portServer = int(port)
         self.socketDE = None
 
     # Funcio que es fa servir per obrir el socket (en els ports que escollim) i connectar-se al servidor.
@@ -63,6 +57,4 @@ class socketTCP:
                 time.sleep(5)  # Canvia a la quantitat de temps entre reintents
                 continue
             break  # Si arriba aquí, la connexió és exitosa i surt del bucle
-                time.sleep(5)  # Canvia a la quantitat de temps entre reintents
-                continue
-            break  # Si arriba aquí, la connexió és exitosa i surt del bucle
+
