@@ -1,6 +1,7 @@
 import socket
 from threading import Thread
 import time
+import struct
 
 # TODO: Utilitzar aquesta funcio quan em connecti a Hypersim
 # Funcio per poder-nos connectar a Hipersim
@@ -21,56 +22,58 @@ def setup_inicial():
 data_dict = {'DE1': '', 'DE2': '', 'DE3': '', 'DE16': '', 'DE17': '', 'DE18': ''}
 exit_flag = False
 
-def nom_dispositiu_edge(port):
-    dispositius = {
-        21014: 'DE1',
-        21024: 'DE2',
-        21034: 'DE3',
-        25014: 'DE16',
-        25024: 'DE17',
-        25034: 'DE18'
-    }
-    return(dispositius.get(port))
+"""
+#Llegir fitxers json i crear els objectes
 
-diccionari_components = {'DE1_0': ('DE1', 'lfVolt'),
-'DE2_0': ('DE2', 'lfP'), 'DE2_1': ('DE2', 'lfVolt'),
-'DE3_0': ('DE3', 'lfP'), 'DE3_1': ('DE3', 'lfVolt'),
-'DE16_0': ('DE16', 'STATEa'), 'DE16_1': ('DE16', 'STATEb'), 'DE16_2': ('DE16', 'STATEc'),
-'DE17_0': ('DE17', 'STATEa'), 'DE17_1': ('DE17', 'STATEb'), 'DE17_2': ('DE17', 'STATEc'),
-'DE18_0': ('DE18', 'STATEa'), 'DE18_1': ('DE18', 'STATEb'), 'DE18_2': ('DE18', 'STATEc')}
-def comunicate_to_hypersim(decoded_data, port):
-    DE = nom_dispositiu_edge(port)
-    data_dict[nom_dispositiu_edge(port)] = decoded_data
-    # passar a info rebuda a llista
-    llista_data = decoded_data.split(',')
-    #passar elements a floats
+diccionari_nodes = llegir_jsons()       #{"20001":"SM1", "30001":"Ld5"}
+"""
+diccionari_nodes = {"21002": "SM1"}
+
+def comunicate_to_hypersim(decoded_data, port, nom):
     # FIXME: aquesta linia inferior servirà quan li passi un -inf?
-    llista_data = [float(valor) for valor in llista_data]
-    for valor in llista_data:
-        if valor != -inf:
-            index = str(valor.index())
-            clau_dicc_components = DE + '_' + index
-            cridaHypersim = diccionari_components[clau_dicc_components]
-            # TODO: utilitzar aquesta linia quan ens conectem a Hypersim
-            """HyWorksApi.setComponentParameter(cridaHypersim[0], cridaHypersim[1], valor)"""
-    print(f"Dades actualitzades en el {DE}")
+    for index, valor in enumerate(decoded_data):
+        if valor != float('-inf'):
+            if "SM" in nom: #Faltaria el cas del generador slack
+                if index == 0:
+                    print(f"canviant index {index}")
+                    # HyWorksApi.setComponentParameter(nom, 'lfP', valor)
+                elif index == 1:
+                    # HyWorksApi.setComponentParameter(nom, 'lfVolt', valor)
+                    print(f"canviant index {index}")
+            elif "Cb" in nom:
+                if index == 0:
+                    # HyWorksApi.setComponentParameter(nom, 'STATEa', valor)      #comprovar que a l'hypersim es fa aixi
+                    print(f"canviant index {index}")
+                elif index == 1:
+                    # HyWorksApi.setComponentParameter(nom, 'STATEb', valor)
+                    print(f"canviant index {index}")
+                elif index == 2:
+                    # HyWorksApi.setComponentParameter(nom, 'STATEc', valor)
+                    print(f"canviant index {index}")
+    print(f"Dades actualitzades en el {nom}")
 
-def handle_client(client_socket, client_address, port):
+def handle_client(client_socket, client_address, port, nom):
     try:
         while True:
-            data = client_socket.recv(1024)
-            if not data:
-                break  # Sortir del bucle si no hi ha més dades
-            if data.startswith(b'ping'):
-                pass
-            else:
-                decoded_data = data.decode('utf-8')
-                print(f"Dades rebudes de {client_address}: {decoded_data} a {nom_dispositiu_edge(port)}")
-                if data_dict[nom_dispositiu_edge(port)] != decoded_data:
-                    comunicate_to_hypersim(decoded_data, port)
-            #Response es un exemple
-            #response = '163000000,1.025'
-            #client_socket.send(response.encode())
+            length_bytes = client_socket.recv(4)
+            if not length_bytes:
+                continue  # Sortir del bucle si no hi ha més dades
+            message_length = struct.unpack('!I', length_bytes)[0]
+            # Read the message containing the floats
+            message_bytes = client_socket.recv(message_length)
+            # Process the message bytes containing the floats
+            number_of_floats = message_length // 4  # Assuming 4 bytes per float
+            received_floats = struct.unpack('f' * number_of_floats, message_bytes)
+            # Handle the received floats
+            print("Received", len(received_floats), "floats:")
+            for f in received_floats:
+                print(f)
+            # Read the end-of-line character to indicate the end of the message
+            eol = client_socket.recv(1)
+            if eol != b'\n':
+                print("Invalid end-of-line character")
+                continue
+            comunicate_to_hypersim(received_floats, port, nom)
     except Exception as e:
         print(f"S'ha produït un error amb el client {client_address}: {e}")
     finally:
@@ -79,7 +82,7 @@ def handle_client(client_socket, client_address, port):
         print(f"Connexió tancada amb {client_address}")
 
 
-def receive_data(port):
+def receive_data(port, nom):
     host = 'localhost'  # Pots canviar-ho al teu IP si és remot
     while True:
         try:
@@ -87,10 +90,10 @@ def receive_data(port):
             server_socket.bind((host, port))
             server_socket.listen()
             print(f"Servidor escoltant a {host}:{port}\n")
-            while True:
-                client_socket, client_address = server_socket.accept()
-                print(f"Connexió acceptada des de {client_address}, {nom_dispositiu_edge(port)}")
-                handle_client(client_socket, client_address, port)
+            # while True:
+            client_socket, client_address = server_socket.accept()
+            print(f"Connexió acceptada des de {client_address}, {nom}")
+            handle_client(client_socket, client_address, port, nom)
         except Exception as e:
             print(f"S'ha produït un error en el port {port}: {e}\n")
         finally:
@@ -105,13 +108,8 @@ def main():
 
     global exit_flag
     threads = {}
-
-    threads['DE1'] = Thread(target=receive_data, args=(21014,))
-    threads['DE2'] = Thread(target=receive_data, args=(21024,))
-    threads['DE3'] = Thread(target=receive_data, args=(21034,))
-    threads['DE16'] = Thread(target=receive_data, args=(25014,))
-    threads['DE17'] = Thread(target=receive_data, args=(25024,))
-    threads['DE18'] = Thread(target=receive_data, args=(25034,))
+    for clau, valor in diccionari_nodes.items(): # clau es el port, valor es el nom (SM1, Ld1...)
+        threads[clau] = Thread(target=receive_data, args=(int(clau), valor))
 
     # Inicia els fils
     for thread in threads.values():

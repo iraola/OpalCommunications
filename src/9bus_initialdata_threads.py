@@ -43,8 +43,8 @@ objectes_socket_tcp["21002"] = objecte
 
 # Funció per aplicar threading a l'enviament de dades
 def enviar_dades_thread(objecte):
-    dades_a_enviar = b''
     while True:
+        dades_a_enviar = b''
         objecte.check_and_reconnect()
         data_list = actualitzar_dades(objecte.nom)   #Funcio per llegir noves dades d'Hypersim
         for f_value in data_list:
@@ -52,6 +52,7 @@ def enviar_dades_thread(objecte):
         objecte.enviar_dades_tcp(struct.pack('!I', len(dades_a_enviar)))
         objecte.enviar_dades_tcp(dades_a_enviar)
         objecte.enviar_dades_tcp(b'\n')
+        time.sleep(5)
 
 
 # Diccionari per fer proves d'enviament de dades.
@@ -75,8 +76,8 @@ def actualitzar_dades(nom):
         dades = ['90000000','30000000']
     elif "Cb" in nom:
         # dades = [HyWorksApi.getLastSensorValues([nom + '.STATEa'])[0],
-        #          HyWorksApi.getLastSensorValues([nom + 'STATEb'])[0],
-        #          HyWorksApi.getLastSensorValues([nom + 'STATEc'])[0]]
+        #          HyWorksApi.getLastSensorValues([nom + '.STATEb'])[0],
+        #          HyWorksApi.getLastSensorValues([nom + '.STATEc'])[0]]
         dades = [1.0, 1.0, 1.0]
     return dades
 
