@@ -3,7 +3,7 @@ import time
 
 class socketTCP:
     def __init__(self, port, nom):
-        self.nom = nom #SM1, Ld1, Cb1
+        self.nom = nom[0] #SM1, Ld1, Cb1        # Ara mateix nomes es te en compte un node per edge (ex: {"20001":["SM1", "CB1"]} --> {"20001":["SM1"]})
         self.portClient = int(port) - 1
         self.portServer = int(port)
         self.socketDE = None

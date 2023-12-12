@@ -2,6 +2,7 @@ import struct
 import time
 from socketTCP import socketTCP
 import threading
+from read_json import get_json_data
 
 # FIXME: utilitzar aquesta part quan vulgui utilitzar el programa amb hypersim
 # Funcio per poder-nos connectar a Hipersim
@@ -27,17 +28,19 @@ def setup_inicial():
 print("Les dades seran enviades a través dels següents ports:\n")
 objectes_socket_tcp = {}
 
-"""
+
 #Llegir fitxers json i crear els objectes
+# Ara mateix nomes es te en compte un node per edge (ex: {"20001":["SM1", "CB1"]} --> {"20001":["SM1"]})
 
-diccionari_nodes = llegir_jsons()       #{"20001":"SM1", "30001":"Ld5"}
+diccionari_nodes = get_json_data()[0]       #{"20001":["SM1"], "30001":["Ld5"]}
 for clau, valor in diccionari_nodes.items():
-    objecte = socketTCP(clau, valor)
-    objectes_socket_tcp[clau] = objecte
-    print(f"Clau: {clau}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")
-"""
+    if valor != []:
+        objecte = socketTCP(clau, valor)
+        objectes_socket_tcp[clau] = objecte
+        print(f"Clau: {clau}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")
 
-objecte = socketTCP("21002", "SM1")
+
+objecte = socketTCP("21002", ["SM1"])
 objectes_socket_tcp["21002"] = objecte
 
 

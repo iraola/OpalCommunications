@@ -2,6 +2,7 @@ import socket
 from threading import Thread
 import time
 import struct
+from read_json import get_json_data
 
 # TODO: Utilitzar aquesta funcio quan em connecti a Hypersim
 # Funcio per poder-nos connectar a Hipersim
@@ -22,12 +23,12 @@ def setup_inicial():
 data_dict = {'DE1': '', 'DE2': '', 'DE3': '', 'DE16': '', 'DE17': '', 'DE18': ''}
 exit_flag = False
 
-"""
+
 #Llegir fitxers json i crear els objectes
 
-diccionari_nodes = llegir_jsons()       #{"20001":"SM1", "30001":"Ld5"}
-"""
-diccionari_nodes = {"21002": "SM1"}
+diccionari_nodes = get_json_data()[1]       #{"20001":["SM1"], "30001":["Ld5"]}
+
+diccionari_nodes = {"21002": ["SM1"]}       # Ara mateix nomes es te en compte un node per edge (ex: {"20001":["SM1", "CB1"]} --> {"20001":["SM1"]})
 
 def comunicate_to_hypersim(decoded_data, port, nom):
     # FIXME: aquesta linia inferior servirà quan li passi un -inf?
@@ -109,7 +110,7 @@ def main():
     global exit_flag
     threads = {}
     for clau, valor in diccionari_nodes.items(): # clau es el port, valor es el nom (SM1, Ld1...)
-        threads[clau] = Thread(target=receive_data, args=(int(clau), valor))
+        threads[clau] = Thread(target=receive_data, args=(int(clau), valor[0]))
 
     # Inicia els fils
     for thread in threads.values():
