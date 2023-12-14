@@ -12,12 +12,12 @@
             "tcp-sensors": {
                 "ip": "0.0.0.0",
                 "ports": {
-                    "11002": ["Switch Gen1", "Generator Gen1"]
+                    "11002": ["SM1"]
                 }
             },
             "tcp-actuators": {
                 "ports": {
-                    "31002": ["Switch Gen1", "Generator Gen1"]
+                    "31002": ["SM1"]
                 }
             }
         },
@@ -66,25 +66,14 @@
             }
         },
         {
-            "label": "Switch Gen1",
-            "driver": "es.bsc.hp2c.edge.opalrt.OpalSwitch",
-            "position": {
-                "x":0,
-                "y":0
-            },
-            "properties": {
-                "indexes": [2,3,4]
-            }
-        },
-        {
-            "label": "Generator Gen1",
+            "label": "SM1",
             "driver": "es.bsc.hp2c.edge.opalrt.OpalGenerator",
             "position": {
                 "x":0,
                 "y":0
             },
             "properties": {
-                "indexes": [5,6]
+                "indexes": [2,3]
             }
         }
     ],
@@ -99,8 +88,8 @@
                 "actuators": ["Switch Gen1"],
                 "other": [200]
             },
-            "trigger": {
-                "type": "onRead",
+                        "trigger": {
+                "type": "onRead", 
                 "method-name": "es.bsc.hp2c.edge.HP2Cedge.onRead",
                 "parameters": ["Voltmeter Gen1"]
             }
@@ -118,7 +107,7 @@
             "trigger": {
                 "type": "onFrequency",
                 "method-name": "es.bsc.hp2c.edge.HP2Cedge.onFrequency",
-                "parameters": [10]
+                "parameters": [10] 
             }
         }
     ]

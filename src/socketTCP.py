@@ -32,6 +32,7 @@ class socketTCP:
         else:
             try:
                 self.socketDE.send(dades)
+                print(f"Enviant a {dades}...")
                 print(f"Enviant a {self.nom}...")
                 # Això no se si cal.
                 """if resposta == b'done':
@@ -46,7 +47,8 @@ class socketTCP:
         while True:
             try:
                 if self.socketDE is not None:
-                    self.socketDE.send(b'ping')
+                    # self.socketDE.send(b'ping')
+                    pass
                 else:
                     self.setup_tcp()
             except OSError as e:

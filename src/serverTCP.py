@@ -26,9 +26,9 @@ exit_flag = False
 
 #Llegir fitxers json i crear els objectes
 
-diccionari_nodes = get_json_data()[1]       #{"20001":["SM1"], "30001":["Ld5"]}
+#diccionari_nodes = get_json_data()[1]       #{"20001":["SM1"], "30001":["Ld5"]}
 
-diccionari_nodes = {"21002": ["SM1"]}       # Ara mateix nomes es te en compte un node per edge (ex: {"20001":["SM1", "CB1"]} --> {"20001":["SM1"]})
+diccionari_nodes = {"31002": ["SM1"]}       # Ara mateix nomes es te en compte un node per edge (ex: {"20001":["SM1", "CB1"]} --> {"20001":["SM1"]})
 
 def comunicate_to_hypersim(decoded_data, port, nom):
     # FIXME: aquesta linia inferior servirà quan li passi un -inf?
@@ -61,9 +61,9 @@ def handle_client(client_socket, client_address, port, nom):
                 continue  # Sortir del bucle si no hi ha més dades
             message_length = struct.unpack('!I', length_bytes)[0]
             # Read the message containing the floats
-            message_bytes = client_socket.recv(message_length)
+            message_bytes = client_socket.recv(message_length*4)
             # Process the message bytes containing the floats
-            number_of_floats = message_length // 4  # Assuming 4 bytes per float
+            number_of_floats = message_length  # Assuming 4 bytes per float
             received_floats = struct.unpack('f' * number_of_floats, message_bytes)
             # Handle the received floats
             print("Received", len(received_floats), "floats:")

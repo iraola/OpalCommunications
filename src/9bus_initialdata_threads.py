@@ -40,21 +40,36 @@ for clau, valor in diccionari_nodes.items():
         print(f"Clau: {clau}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")
 
 
-objecte = socketTCP("21002", ["SM1"])
-objectes_socket_tcp["21002"] = objecte
+#objecte = socketTCP("11002", ["SM1"])
+objectes_socket_tcp["11002"] = objecte
 
 
 # Funció per aplicar threading a l'enviament de dades
 def enviar_dades_thread(objecte):
     while True:
-        dades_a_enviar = b''
+        message = b''
         objecte.check_and_reconnect()
         data_list = actualitzar_dades(objecte.nom)   #Funcio per llegir noves dades d'Hypersim
+        
+        # objecte.enviar_dades_tcp(struct.pack('!I', len(dades_a_enviar)))
+        # objecte.enviar_dades_tcp(dades_a_enviar)
+        # objecte.enviar_dades_tcp(b'\n')
+        values = []
+        for i in data_list:
+            values.append(i)
+        message_length = len(values)
+
+        # Preparar el mensaje
+        message = struct.pack('!I', message_length)
+        # message += struct.pack(f">{message_length}f", *values)
         for f_value in data_list:
-            dades_a_enviar += struct.pack('f', float(f_value))
-        objecte.enviar_dades_tcp(struct.pack('!I', len(dades_a_enviar)))
-        objecte.enviar_dades_tcp(dades_a_enviar)
-        objecte.enviar_dades_tcp(b'\n')
+            message += struct.pack('!f', f_value) 
+        # message += b'\n'        
+        # message += struct.pack('!p', b'\n')
+        message += struct.pack('>h', ord('\n'))
+
+        objecte.enviar_dades_tcp(message)
+
         time.sleep(5)
 
 
@@ -72,7 +87,7 @@ def actualitzar_dades(nom):
     if "SM" in nom: #Faltaria el cas del generador slack
         # dades = [HyWorksApi.getComponentParameter(nom, 'lfP')[0],
         #          HyWorksApi.getComponentParameter(nom, 'lfVolt')[0]]
-        dades = ['163000000','1.025']
+        dades = [1.0,0.0]
     elif "Ld" in nom:
         # dades = [HyWorksApi.getComponentParameter(nom, 'Po')[0],
         #          HyWorksApi.getComponentParameter(nom, 'Qo')[0]]
