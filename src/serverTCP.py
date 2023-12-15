@@ -28,7 +28,7 @@ exit_flag = False
 
 #diccionari_nodes = get_json_data()[1]       #{"20001":["SM1"], "30001":["Ld5"]}
 
-diccionari_nodes = {"31002": ["SM1"]}       # Ara mateix nomes es te en compte un node per edge (ex: {"20001":["SM1", "CB1"]} --> {"20001":["SM1"]})
+diccionari_nodes = {"31002": ["CB1"]}       # Ara mateix nomes es te en compte un node per edge (ex: {"20001":["SM1", "CB1"]} --> {"20001":["SM1"]})
 
 def comunicate_to_hypersim(decoded_data, port, nom):
     # FIXME: aquesta linia inferior servirà quan li passi un -inf?
@@ -41,7 +41,7 @@ def comunicate_to_hypersim(decoded_data, port, nom):
                 elif index == 1:
                     # HyWorksApi.setComponentParameter(nom, 'lfVolt', valor)
                     print(f"canviant index {index}")
-            elif "Cb" in nom:
+            elif "CB" in nom:
                 if index == 0:
                     # HyWorksApi.setComponentParameter(nom, 'STATEa', valor)      #comprovar que a l'hypersim es fa aixi
                     print(f"canviant index {index}")
@@ -56,24 +56,29 @@ def comunicate_to_hypersim(decoded_data, port, nom):
 def handle_client(client_socket, client_address, port, nom):
     try:
         while True:
-            length_bytes = client_socket.recv(4)
-            if not length_bytes:
-                continue  # Sortir del bucle si no hi ha més dades
-            message_length = struct.unpack('!I', length_bytes)[0]
+            # length_bytes = client_socket.recv(4)
+            # if not length_bytes:
+            #     continue  # Sortir del bucle si no hi ha més dades
+            # message_length = struct.unpack('>I', length_bytes)[0]
+            # print(message_length)
             # Read the message containing the floats
+            if "CB" in nom:
+                message_length = 3
             message_bytes = client_socket.recv(message_length*4)
+            # print(message_bytes)
             # Process the message bytes containing the floats
             number_of_floats = message_length  # Assuming 4 bytes per float
-            received_floats = struct.unpack('f' * number_of_floats, message_bytes)
+            received_floats = struct.unpack('!' + 'f' * number_of_floats, message_bytes)
             # Handle the received floats
             print("Received", len(received_floats), "floats:")
             for f in received_floats:
                 print(f)
             # Read the end-of-line character to indicate the end of the message
-            eol = client_socket.recv(1)
-            if eol != b'\n':
-                print("Invalid end-of-line character")
-                continue
+            # eol = client_socket.recv(1)
+            # print(eol)
+            # if eol != b'\n':
+            #     print("Invalid end-of-line character")
+            #     continue
             comunicate_to_hypersim(received_floats, port, nom)
     except Exception as e:
         print(f"S'ha produït un error amb el client {client_address}: {e}")

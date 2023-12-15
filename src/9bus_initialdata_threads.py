@@ -40,7 +40,7 @@ for clau, valor in diccionari_nodes.items():
         print(f"Clau: {clau}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")
 
 
-#objecte = socketTCP("11002", ["SM1"])
+objecte = socketTCP("11002", ["CB1"])
 objectes_socket_tcp["11002"] = objecte
 
 
@@ -92,7 +92,7 @@ def actualitzar_dades(nom):
         # dades = [HyWorksApi.getComponentParameter(nom, 'Po')[0],
         #          HyWorksApi.getComponentParameter(nom, 'Qo')[0]]
         dades = ['90000000','30000000']
-    elif "Cb" in nom:
+    elif "CB" in nom:
         # dades = [HyWorksApi.getLastSensorValues([nom + '.STATEa'])[0],
         #          HyWorksApi.getLastSensorValues([nom + '.STATEb'])[0],
         #          HyWorksApi.getLastSensorValues([nom + '.STATEc'])[0]]
