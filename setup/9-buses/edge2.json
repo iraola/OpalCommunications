@@ -3,21 +3,22 @@
         "label": "edge2",
         "udp-sensors": 3,
         "comms":{
-            "udp": {
-                "ip": "0.0.0.0",
-                "ports": {
-                    "22002": []
+            "opal-udp": {
+                "protocol": "udp",
+                "sensors": {
+                    "ip": "0.0.0.0",
+                    "port": "22002"
                 }
             },
-            "tcp-sensors": {
-                "ip": "0.0.0.0",
-                "ports": {
-                    "12002": []
-                }
-            },
-            "tcp-actuators": {
-                "ports": {
-                    "32002": []
+            "opal-tcp": {
+                "protocol": "tcp",
+                "sensors": {
+                    "ip": "0.0.0.0",
+                    "port": "12002"
+                },
+                "actuators": {
+                    "ip": "$LOCAL_IP",
+                    "port": "32002"
                 }
             }
         },
@@ -50,42 +51,46 @@
                 "y":40
             },
             "properties": {
+                "comm-type": "opal-udp",
                 "indexes": [0]
             }
         },
         {
-            "label": "Three-Phase Voltmeter Gen1",
-            "driver": "es.bsc.hp2c.edge.opalrt.OpalVoltmeterThreePhase",
+            "label": "Wattmeter Gen1",
+            "driver": "es.bsc.hp2c.edge.opalrt.OpalWattmeter",
             "position": {
                 "x":20,
                 "y":40
             },
 
             "properties": {
-                "indexes": [1,2,3]
+                "comm-type": "opal-udp",
+                "indexes": [1]
             }
         },
         {
             "label": "Three-Phase Ammeter Gen1",
-            "driver": "es.bsc.hp2c.edge.opalrt.OpalAmmeterThreePhase",
+            "driver": "es.bsc.hp2c.edge.opalrt.OpalAmmeter",
             "position": {
                 "x":20,
                 "y":40
             },
 
             "properties": {
-                "indexes": [4,5,6]
+                "comm-type": "opal-udp",
+                "indexes": [2,3,4]
             }
         },
         {
-            "label": "Switch Gen1",
+            "label": "Three-Phase Switch Gen1",
             "driver": "es.bsc.hp2c.edge.opalrt.OpalSwitch",
             "position": {
                 "x":0,
                 "y":0
             },
             "properties": {
-                "indexes": [7,8,9]
+                "comm-type": "opal-tcp",
+                "indexes": [0,1,2]
             }
         }
     ],
@@ -97,7 +102,7 @@
             "method-name": "es.bsc.hp2c.edge.funcs.VoltLimitation",
             "parameters": {
                 "sensors": ["Voltmeter Gen1"],
-                "actuators": ["Switch Gen1"],
+                "actuators": ["Three-Phase Switch Gen1"],
                 "other": [200]
             },
             "trigger": {
