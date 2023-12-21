@@ -57,7 +57,7 @@
             }
         },
         {
-            "label": "Three-Phase Switch Gen1",
+            "label": "Three-Phase Switch CB1",
             "driver": "es.bsc.hp2c.edge.opalrt.OpalSwitch",
             "position": {
                 "x":0,
@@ -81,7 +81,7 @@
             }
         },
         {
-            "label": "Generator Gen1",
+            "label": "Generator SM1",
             "driver": "es.bsc.hp2c.edge.opalrt.OpalGenerator",
             "position": {
                 "x":0,

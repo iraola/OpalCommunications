@@ -37,7 +37,7 @@ def comunicate_to_hypersim(decoded_data, port, nom):
             if "SM" in nom: #Faltaria el cas del generador slack
                 if index == 0:
                     print(f"canviant index {index}")
-                    # HyWorksApi.setComponentParameter(nom, 'lfP', valor)
+                    # HyWorksApi.setComponentParameter(nom, 'lfP', valor)           # Canviar agafant nomes ultima paraula de l'string nom
                 elif index == 1:
                     # HyWorksApi.setComponentParameter(nom, 'lfVolt', valor)
                     print(f"canviant index {index}")

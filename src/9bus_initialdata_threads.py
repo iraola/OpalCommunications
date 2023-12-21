@@ -40,8 +40,8 @@ for clau, valor in diccionari_nodes.items():
         print(f"Clau: {clau}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")
 
 
-objecte = socketTCP("11002", ["CB1"])
-objectes_socket_tcp["11002"] = objecte
+#objecte = socketTCP("11002", ["CB1"])
+#objectes_socket_tcp["11002"] = objecte
 
 
 # Funció per aplicar threading a l'enviament de dades
@@ -97,6 +97,8 @@ def actualitzar_dades(nom):
         #          HyWorksApi.getLastSensorValues([nom + '.STATEb'])[0],
         #          HyWorksApi.getLastSensorValues([nom + '.STATEc'])[0]]
         dades = [1.0, 1.0, 1.0]
+    else:
+        print('error with device: ' + nom)
     return dades
 
 
