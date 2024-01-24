@@ -25,45 +25,25 @@ exit_flag = False
 
 
 #Llegir fitxers json i crear els objectes
+classes_edge = get_json_data()
 
-#diccionari_nodes = get_json_data()[1]       #{"20001":["SM1"], "30001":["Ld5"]}
+def comunicate_to_hypersim(decoded_data, edge):
+    i = 0
+    for dispositiu in edge.devices:
+        for sensor in edge.devices[dispositiu]:
+            if decoded_data[i] != float('-inf'):
+                print(f"canviant sensor {sensor} del dispositiu {dispositiu} de l'edge {edge.edge_name}")
+                HyWorksApi.setComponentParameter(dispositiu.split()[-1], sensor, decoded_data[i])
+            i = i+1    
 
-diccionari_nodes = {"31002": ["CB1"]}       # Ara mateix nomes es te en compte un node per edge (ex: {"20001":["SM1", "CB1"]} --> {"20001":["SM1"]})
+    print(f"Dades actualitzades en el {edge.edge_name}")
 
-def comunicate_to_hypersim(decoded_data, port, nom):
-    # FIXME: aquesta linia inferior servirà quan li passi un -inf?
-    for index, valor in enumerate(decoded_data):
-        if valor != float('-inf'):
-            if "SM" in nom: #Faltaria el cas del generador slack
-                if index == 0:
-                    print(f"canviant index {index}")
-                    # HyWorksApi.setComponentParameter(nom, 'lfP', valor)           # Canviar agafant nomes ultima paraula de l'string nom
-                elif index == 1:
-                    # HyWorksApi.setComponentParameter(nom, 'lfVolt', valor)
-                    print(f"canviant index {index}")
-            elif "CB" in nom:
-                if index == 0:
-                    # HyWorksApi.setComponentParameter(nom, 'STATEa', valor)      #comprovar que a l'hypersim es fa aixi
-                    print(f"canviant index {index}")
-                elif index == 1:
-                    # HyWorksApi.setComponentParameter(nom, 'STATEb', valor)
-                    print(f"canviant index {index}")
-                elif index == 2:
-                    # HyWorksApi.setComponentParameter(nom, 'STATEc', valor)
-                    print(f"canviant index {index}")
-    print(f"Dades actualitzades en el {nom}")
-
-def handle_client(client_socket, client_address, port, nom):
+def handle_client(client_socket, edge):
     try:
         while True:
-            # length_bytes = client_socket.recv(4)
-            # if not length_bytes:
-            #     continue  # Sortir del bucle si no hi ha més dades
-            # message_length = struct.unpack('>I', length_bytes)[0]
-            # print(message_length)
-            # Read the message containing the floats
-            if "CB" in nom:
-                message_length = 3
+
+            message_length = max(max(indices) for indices in edge.devices.values()) + 1
+
             message_bytes = client_socket.recv(message_length*4)
             # print(message_bytes)
             # Process the message bytes containing the floats
@@ -73,35 +53,37 @@ def handle_client(client_socket, client_address, port, nom):
             print("Received", len(received_floats), "floats:")
             for f in received_floats:
                 print(f)
+
             # Read the end-of-line character to indicate the end of the message
             # eol = client_socket.recv(1)
             # print(eol)
             # if eol != b'\n':
             #     print("Invalid end-of-line character")
             #     continue
-            comunicate_to_hypersim(received_floats, port, nom)
+            comunicate_to_hypersim(received_floats, edge)
     except Exception as e:
-        print(f"S'ha produït un error amb el client {client_address}: {e}")
+        print(f"S'ha produït un error amb el client {edge.actuator_port}: {e}")
     finally:
         # Tanca la connexió amb aquest client quan surtis del bucle
         client_socket.close()
-        print(f"Connexió tancada amb {client_address}")
+        print(f"Connexió tancada amb {edge.actuator_port}")
 
 
-def receive_data(port, nom):
+def receive_data(edge):
     host = 'localhost'  # Pots canviar-ho al teu IP si és remot
     while True:
         try:
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server_socket.bind((host, port))
+            server_socket.bind((host, edge.actuator_port))
             server_socket.listen()
-            print(f"Servidor escoltant a {host}:{port}\n")
+            print(f"Servidor escoltant a {host}:{edge.actuator_port}\n")
             # while True:
             client_socket, client_address = server_socket.accept()
-            print(f"Connexió acceptada des de {client_address}, {nom}")
-            handle_client(client_socket, client_address, port, nom)
+            print(f"Connexió acceptada des de {client_address}, {edge.nom_edge}")
+            # handle_client(client_socket, client_address, edge.actuator_port, edge.nom_edge)
+            handle_client(client_socket, edge)
         except Exception as e:
-            print(f"S'ha produït un error en el port {port}: {e}\n")
+            print(f"S'ha produït un error en el port {edge.actuator_port}: {e}\n")
         finally:
             # Tanca el socket quan surtis del bucle
             server_socket.close()
@@ -114,8 +96,8 @@ def main():
 
     global exit_flag
     threads = {}
-    for clau, valor in diccionari_nodes.items(): # clau es el port, valor es el nom (SM1, Ld1...)
-        threads[clau] = Thread(target=receive_data, args=(int(clau), valor[0]))
+    for edge in classes_edge: 
+        threads[edge.nom_edge] = Thread(target=receive_data, args=(edge,))
 
     # Inicia els fils
     for thread in threads.values():

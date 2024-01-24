@@ -2,11 +2,12 @@ import socket
 import time
 
 class socketTCP:
-    def __init__(self, port, nom):
-        self.nom = nom[0] #SM1, Ld1, Cb1        # Ara mateix nomes es te en compte un node per edge (ex: {"20001":["SM1", "CB1"]} --> {"20001":["SM1"]})
+    def __init__(self, nom_edge, port, devices):
+        self.nom_edge = nom_edge
         self.portClient = int(port) - 1
         self.portServer = int(port)
         self.socketDE = None
+        self.devices = devices
 
     # Funcio que es fa servir per obrir el socket (en els ports que escollim) i connectar-se al servidor.
     def setup_tcp(self):
@@ -33,13 +34,13 @@ class socketTCP:
             try:
                 self.socketDE.send(dades)
                 print(f"Enviant a {dades}...")
-                print(f"Enviant a {self.nom}...")
+                print(f"Enviant a {self.nom_edge}...")
                 # Això no se si cal.
                 """if resposta == b'done':
                     print('done')
                     time.sleep(1)"""
             except OSError as e:
-                print(f"Error en l'enviament de dades {self.nom}: {e}")
+                print(f"Error en l'enviament de dades {self.nom_edge}: {e}")
                 self.socketDE = None
 
     # Funció que comprova que la connexió segueix activa i gestiona self.socketDE. I
@@ -52,10 +53,10 @@ class socketTCP:
                 else:
                     self.setup_tcp()
             except OSError as e:
-                print(f'Error en la connexió {self.nom}: {e}')
+                print(f'Error en la connexió {self.nom_edge}: {e}')
                 self.socketDE = None
                 # Espera abans de tornar a intentar la connexió
-                print(f'Esperant abans de tornar a intentar la connexió a {self.nom}...')
+                print(f'Esperant abans de tornar a intentar la connexió a {self.nom_edge}...')
                 time.sleep(5)  # Canvia a la quantitat de temps entre reintents
                 continue
             break  # Si arriba aquí, la connexió és exitosa i surt del bucle

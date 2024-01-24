@@ -31,13 +31,22 @@ objectes_socket_tcp = {}
 
 #Llegir fitxers json i crear els objectes
 # Ara mateix nomes es te en compte un node per edge (ex: {"20001":["SM1", "CB1"]} --> {"20001":["SM1"]})
-
+'''
 diccionari_nodes = get_json_data()[0]       #{"20001":["SM1"], "30001":["Ld5"]}
 for clau, valor in diccionari_nodes.items():
     if valor != []:
         objecte = socketTCP(clau, valor)
         objectes_socket_tcp[clau] = objecte
         print(f"Clau: {clau}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")
+'''
+        
+
+classes_edge = get_json_data()
+for edge in classes_edge:
+    if edge.devices != {}:
+        objecte = socketTCP(edge.edge_name, edge.sensor_port, edge.devices)
+        objectes_socket_tcp[edge.edge_name] = objecte
+        print(f"Clau: {objecte.nom_edge}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")
 
 
 #objecte = socketTCP("11002", ["CB1"])
@@ -49,7 +58,7 @@ def enviar_dades_thread(objecte):
     while True:
         message = b''
         objecte.check_and_reconnect()
-        data_list = actualitzar_dades(objecte.nom)   #Funcio per llegir noves dades d'Hypersim
+        data_list = actualitzar_dades(objecte)   #Funcio per llegir noves dades d'Hypersim
         
         # objecte.enviar_dades_tcp(struct.pack('!I', len(dades_a_enviar)))
         # objecte.enviar_dades_tcp(dades_a_enviar)
@@ -83,22 +92,18 @@ def enviar_dades_thread(objecte):
 # FIXME: utilitzar aquesta part quan vulgui utilitzar el programa amb hypersim
 # Diccionari que utilitzarem quan estiguem fent servir Hypersim, per extreure les dades de la simulacio.
 
-def actualitzar_dades(nom):
-    if "SM" in nom: #Faltaria el cas del generador slack
-        # dades = [HyWorksApi.getComponentParameter(nom, 'lfP')[0],
-        #          HyWorksApi.getComponentParameter(nom, 'lfVolt')[0]]
-        dades = [1.0,0.0]
-    elif "Ld" in nom:
-        # dades = [HyWorksApi.getComponentParameter(nom, 'Po')[0],
-        #          HyWorksApi.getComponentParameter(nom, 'Qo')[0]]
-        dades = ['90000000','30000000']
-    elif "CB" in nom:
-        # dades = [HyWorksApi.getLastSensorValues([nom + '.STATEa'])[0],
-        #          HyWorksApi.getLastSensorValues([nom + '.STATEb'])[0],
-        #          HyWorksApi.getLastSensorValues([nom + '.STATEc'])[0]]
-        dades = [1.0, 1.0, 1.0]
-    else:
-        print('error with device: ' + nom)
+def actualitzar_dades(objecte):
+    dades = []
+    try:
+        for dispositiu in objecte.devices:
+            if 'CB' in dispositiu:
+                for sensor in objecte.devices[dispositiu]:
+                    dades.append(HyWorksApi.getLastSensorValues([dispositiu.split()[-1] + '.' + sensor])[0])
+            else:
+                for sensor in objecte.devices[dispositiu]:
+                    dades.append(HyWorksApi.getComponentParameter(dispositiu.split()[-1], sensor)[0])
+    except Exception:
+        print('error with device: ' + objecte.nom_edge)
     return dades
 
 
