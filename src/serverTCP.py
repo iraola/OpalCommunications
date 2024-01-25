@@ -32,11 +32,11 @@ def comunicate_to_hypersim(decoded_data, edge):
     for dispositiu in edge.devices:
         for sensor in edge.devices[dispositiu]:
             if decoded_data[i] != float('-inf'):
-                print(f"canviant sensor {sensor} del dispositiu {dispositiu} de l'edge {edge.edge_name}")
+                print(f"canviant sensor {sensor} del dispositiu {dispositiu} de l'edge {edge.label}")
                 HyWorksApi.setComponentParameter(dispositiu.split()[-1], sensor, decoded_data[i])
             i = i+1    
 
-    print(f"Dades actualitzades en el {edge.edge_name}")
+    print(f"Dades actualitzades en el {edge.label}")
 
 def handle_client(client_socket, edge):
     try:
