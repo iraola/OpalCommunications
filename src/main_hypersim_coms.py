@@ -108,6 +108,7 @@ class Edge():
                             order = order + 1
                         else:
                             pending_devices.append(dev_name)
+                            break
                 else:
                     for sensor in self.devices[dev_name][0]:
                         if order in self.devices[dev_name][1]:
@@ -138,7 +139,7 @@ class Edge():
             while True:
                 self.check_and_reconnect_actuators_coms()
 
-                message_length = max(max(indices) for indices in self.devices.values()) + 1
+                message_length = max(max(values[1]) for values in self.devices.values()) + 1
 
                 message_bytes = self.actuator_socket.recv(message_length*4)
 
@@ -187,7 +188,7 @@ class Edge():
                 else:
                     self.setup_actuators_port()
             except OSError as e:
-                print(f'Error en la connexió {self.label}: {e}')
+                print(f'Connection Error on {self.label}: {e}')
                 self.actuator_socket = None
                 # Wait before attempting the connection again.
                 print(f'Waiting before attempting the connection again to {self.label}...')
