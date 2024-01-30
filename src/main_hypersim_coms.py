@@ -9,14 +9,15 @@ import threading
 class Edge():
     def __init__(self, label, sensor_port, actuator_port, devices):
         self.label = label
-        self.local_IP = 'localhost'
-        self.remote_IP = 'localhost'
+        self.local_IP = '0.0.0.0' 
+        self.remote_IP = '0.0.0.0'
         self.sensor_port_remote = int(sensor_port)
         self.sensor_port_local = int(sensor_port) - 1
         self.actuator_port = int(actuator_port)
         self.devices = devices
         self.sensor_socket = None
         self.actuator_socket = None
+        self.client_actuators_socket = None
     
     def add_device(self, device_name, indexs):
         if 'SM' in device_name.split()[-1] and len(indexs) == 2:
@@ -104,7 +105,8 @@ class Edge():
                 if 'CB' in dev_name:
                     for sensor in self.devices[dev_name][0]:
                         if order in self.devices[dev_name][1]:
-                            dades.append(HyWorksApi.getLastSensorValues([dev_name.split()[-1] + '.' + sensor])[0])
+                            #dades.append(HyWorksApi.getLastSensorValues([dev_name.split()[-1] + '.' + sensor])[0])
+                            dades.append(1)
                             order = order + 1
                         else:
                             pending_devices.append(dev_name)
@@ -112,7 +114,8 @@ class Edge():
                 else:
                     for sensor in self.devices[dev_name][0]:
                         if order in self.devices[dev_name][1]:
-                            dades.append(HyWorksApi.getComponentParameter(dev_name.split()[-1], sensor)[0])
+                            #dades.append(HyWorksApi.getComponentParameter(dev_name.split()[-1], sensor)[0])
+                            dades.append(10000)
                             order = order + 1
                         else:
                             pending_devices.append(dev_name)
@@ -141,7 +144,7 @@ class Edge():
 
                 message_length = max(max(values[1]) for values in self.devices.values()) + 1
 
-                message_bytes = self.actuator_socket.recv(message_length*4)
+                message_bytes = self.client_actuators_socket.recv(message_length*4)
 
                 # Process the message bytes containing the floats
                 number_of_floats = message_length  # Assuming 4 bytes per float
@@ -173,7 +176,7 @@ class Edge():
                 self.actuator_socket.listen()
                 print(f"Servidor escoltant a {self.local_IP}:{self.actuator_port}\n")
 
-                client_socket, client_address = self.actuator_socket.accept()
+                self.client_actuators_socket, client_address = self.actuator_socket.accept()
                 print(f"Connexió acceptada des de {client_address}, {self.label}")
 
             except Exception as e:
@@ -203,7 +206,7 @@ class Edge():
             for sensor in self.devices[dev_name][0]:
                 if decoded_data[i] != float('-inf'):
                     print(f"canviant sensor {sensor} del dispositiu {dev_name} de l'edge {self.label}")
-                    HyWorksApi.setComponentParameter(dev_name.split()[-1], sensor, decoded_data[i])
+                    #HyWorksApi.setComponentParameter(dev_name.split()[-1], sensor, decoded_data[i])
                 i = i+1    
 
         print(f"Dades actualitzades en el {self.label}")
