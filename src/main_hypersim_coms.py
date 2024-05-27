@@ -217,7 +217,7 @@ def get_json_data():
 
     # Crear la ruta al fitxer JSON a partir de la ruta de l'script
 
-    ruta_fitxers = os.path.join(current_directory, '../setup/')
+    ruta_fitxers = os.path.join(current_directory, '../setup-9-buses/')
     i = 0
     edge_list = []
     # d_sensors = {}
