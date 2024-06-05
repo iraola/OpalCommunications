@@ -43,7 +43,7 @@
 
     "devices": [
         {
-            "label": "Three-Phase Voltmeter SM2",
+            "label": "Three-Phase Voltmeter SM2 Volt",
             "driver": "es.bsc.hp2c.edge.opalrt.OpalVoltmeter",
             "driver-dt": "es.bsc.hp2c.server.device.VirtualVoltmeter",
             "position": {
