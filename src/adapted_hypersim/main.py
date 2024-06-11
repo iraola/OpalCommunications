@@ -1,15 +1,22 @@
 import os
 import json
+import sys
+import threading
 
-from src.adapted_hypersim.Edge import Edge
+from Edge import Edge
+from utils import hypersim_setup
 
 
 def main():
     edge_list = get_json_data()
+    cont = 0
+    hypersim_setup()
     for edge in edge_list:
-        edge.run_udp_sensors_socket()
-        #edge.run_tcp_sensors_socket()
+        #t = threading.Thread(target=edge.run_udp_sensors_socket, args=())
+        edge.run_tcp_sensors_socket()
         #edge.run_tcp_actuators_socket()
+        #t.start()
+        #t.join()
 
 
 def get_json_data():
@@ -17,7 +24,7 @@ def get_json_data():
 
     # Crear la ruta al fitxer JSON a partir de la ruta de l'script
 
-    ruta_fitxers = os.path.join(current_directory, '../../setup-9-buses/')
+    ruta_fitxers = os.path.join(current_directory, '//wsl.localhost/Ubuntu/home/ubuntu/hp2cdt/deployments/9-buses/setup')
     edge_list = []
     # d_sensors = {}
     # d_actuators = {}

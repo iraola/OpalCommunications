@@ -1,6 +1,8 @@
+import os
+import sys
 
-"""def hypersim_setup():
-    hypersimDir = r"C:\\OPAL-RT\\HYPERSIM\\hypersim_2023.2.1.o404"
+def hypersim_setup():
+    hypersimDir = r"C:\\OPAL-RT\\HYPERSIM\\hypersim_2024.1.0.o39"
     if not os.path.isdir(hypersimDir):
         print("INVALID HYPERSIM DIRECTORY SPECIFIED IN THE SCRIPT")
         exit(1)
@@ -8,9 +10,9 @@
     import HyWorksApiGRPC as HyWorksApi
     HyWorksApi.startAndConnectHypersim()
     print(os.path.realpath(__file__))
-    designPath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'HVAC_230kV_9Bus_IEEE.ecf')
+    designPath = r"C:\Users\Hypersim\Documents\marcel\HYPERSIM\HYPERSIM_IEEE9Bus_50Hz\HVAC_230kV_9bus_IEEE.ecf"
     print(designPath)
-    HyWorksApi.openDesign(designPath)"""
+    HyWorksApi.openDesign(designPath) 
 
 def get_type_values(driver, types, indexes):
     suffix = driver.split(".")[-1]
@@ -32,6 +34,14 @@ def get_type_values(driver, types, indexes):
                 values = (['Ia', 'Ib', 'Ic'], indexes)
             elif type == "Ammeter" and len(indexes) == 1:
                 values = (['Ia'], indexes)
+            elif type == "Wattmeter" and len(indexes) == 3:
+                values = (['Wa', 'Wb', 'Wc'], indexes)
+            elif type == "Wattmeter" and len(indexes) == 1:
+                values = (['Wa'], indexes)
+            elif type == "Varmeter" and len(indexes) == 3:
+                values = (['VAa', 'VAb', 'VAc'], indexes)
+            elif type == "Varmeter" and len(indexes) == 1:
+                values = (['VAa'], indexes)
             else:
                 values = None
             return values
