@@ -13,8 +13,8 @@ def main():
     hypersim_setup()
     for edge in edge_list:
         #t = threading.Thread(target=edge.run_udp_sensors_socket, args=())
-        edge.run_tcp_sensors_socket()
-        #edge.run_tcp_actuators_socket()
+        #edge.run_tcp_sensors_socket()
+        edge.run_tcp_actuators_socket()
         #t.start()
         #t.join()
 

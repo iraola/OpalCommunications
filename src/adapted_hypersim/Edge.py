@@ -27,14 +27,6 @@ class Edge():
         self.tcp_sensors_port = int(tcp_sensors_port)
         self.actuators_port = int(actuator_port)
 
-        self.udp_sensors_socket = self.setup_udp_client() #TODO: check multiprocessing
-        self.tcp_sensors_socket = self.setup_tcp_client(self.remote_IP, self.tcp_sensors_port)
-        
-        """
-        self.hyp_actuators_socket = threading.Thread(
-            target=self.setup_tcp_client,
-            args=(self.hyp_actuators_port))"""
-
         self.devices_udp = {}
         self.devices_tcp = {}
 
@@ -51,21 +43,34 @@ class Edge():
             else:
                 print("Protocol not recognized")
     
-    def extract_sensors_data(self, device):
+    def get_sensors_data(self, device):
         data = []
-        if "SM" in device:
+        if "CB" in device:
             for sensor in self.devices_tcp[device][0]:
-                if sensor == "lfP":
-                    sensor = "Va"
-                if sensor == "lfVolt":
-                    sensor = "Vb"
                 data.append(HyWorksApi.getLastSensorValues([f"{device}.{sensor}"])[0])
+        else:
+            for sensor in self.devices_tcp[device][0]:
+                data.append(HyWorksApi.getComponentParameter(device, sensor))
         return data
-            
+
+    def set_sensors_data(self, decoded_data):
+        # Input the actuators data to the Hypersim model using the HyWorksApi library
+        i = 0
+        for dev_name in self.devices_tcp:
+            for sensor in self.devices_tcp[dev_name][0]:
+                if decoded_data[i] != float('-inf'):
+                    print(
+                        f"Setting value {sensor} from device {dev_name}, edge {self.label}")
+                    HyWorksApi.setComponentParameter(dev_name.split()[-1], sensor, decoded_data[i])
+                i = i + 1
+
+        print(f"Data updated in {self.label}")
 
     ################### UDP SENSORS ########################
     def run_udp_sensors_socket(self):
         while True:
+            udp_sensors_socket = self.setup_udp_client()  # TODO: check multiprocessing
+
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.bind(("0.0.0.0", self.hyp_udp_sensors_port))
             try:
@@ -82,21 +87,22 @@ class Edge():
                     print(f"Received {num_floats} floats")
                     print(f"Floats: {floats}")
 
-                    self.udp_sensors_socket.sendto(packed_data, (self.remote_IP, self.udp_sensors_port))
+                    udp_sensors_socket.sendto(packed_data, (self.remote_IP, self.udp_sensors_port))
             except socket.timeout:
                 print("Data wasn't received for 5 seconds")
             except KeyboardInterrupt:
                 print(
                     '\nKeyboard interrupt detected. Closing socket..')
                 sock.close()
+                udp_sensors_socket.close()
                 exit(0)
             except Exception as e:
                 print(f"An error occurred in the edge {self.label} in port {self.hyp_udp_sensors_port}: {e}\n")
             finally:
-                # Tanca el socket quan surtis del bucle                                                      
+                # Tanca el socket quan surtis del bucle
                 sock.close()
+                udp_sensors_socket.close()
                 time.sleep(5)
-
 
 
     def setup_udp_client(self):
@@ -112,16 +118,16 @@ class Edge():
     ################### TCP SENSORS ########################
     def run_tcp_sensors_socket(self):
         while True:
+            tcp_sensors_socket = self.setup_tcp_client(self.remote_IP,
+                                                            self.tcp_sensors_port)
             while(True):
                 try:
                     print(self.label)
                     for device in self.devices_tcp.keys():
                         print(device)
-                        data = self.extract_sensors_data(device)
-                        print("-----------------", data)
+                        data = self.get_sensors_data(device)
                         if len(data) == 0: continue
                         message_length = len(data)
-                        print("-----------------", data)
 
                         # Prepare the message
                         sensors_data = struct.pack('!I', message_length)
@@ -131,35 +137,57 @@ class Edge():
 
                         sensors_data += struct.pack('>h', ord('\n'))
 
-                        self.tcp_sensors_socket.send(sensors_data)
+                        tcp_sensors_socket.send(sensors_data)
                         print(f"Sending {sensors_data}...")
                         print(f"Sending to {self.label}...")
 
-                    time.sleep(2)
                 except Exception as e:
                     print(f"An error occurred in the edge {self.label} in port {self.tcp_sensors_port}: {e}\n")
                     print("closing")  
-                    self.tcp_sensors_socket.close()
-                time.sleep(2)                                                  
-                    
+                    tcp_sensors_socket.close()
+                time.sleep(2)
 
-    def send_data_tcp(self, data, socket):
-        if socket:
-            try:
-                socket.sendall(data.encode())
-                ip, port = socket.getpeername()
-                print(f'Data sent to {ip}:{port}')
-            except OSError as e:
-                print(f'Error sending data: {e}')
 
-    """
     ################### TCP ACTUATORS ######################
     def run_tcp_actuators_socket(self):
-        socket = asnd("0.0.0.0", self.actuators_port)
-        while(True):
-            data = socket.receive()
-            send_data_tcp(data, self.hyp_actuators_socket)
-    """
+        while True:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(("0.0.0.0", self.hyp_tcp_sensors_port))
+            sock.listen()
+            print(
+                f"Server listening at 0.0.0.0:{self.hyp_tcp_sensors_port}\n")
+
+            conn, address = sock.accept()
+            print(f"Accepted connexion from {address}, {self.label}")
+            try:
+                while True:
+                    message_length = conn.recv(4)
+                    message_length = struct.unpack('I', message_length)
+                    print("Message_length: ", message_length)
+
+                    message_bytes = conn.recv(message_length[0] * 4)
+
+                    # Process the message bytes containing the floats
+                    received_floats = struct.unpack('!' + 'f' * message_length[0],
+                                                    message_bytes)
+                    # Handle the received floats
+                    print("Received", len(received_floats), "floats:")
+                    for f in received_floats:
+                        print(f)
+
+                    # Read the end-of-line character to indicate the end of the message
+                    eol = conn.recv(1)
+                    print(eol)
+                    if eol != b'\n':
+                         print("Invalid end-of-line character")
+                         continue
+                    self.set_sensors_data(received_floats)
+            except Exception as e:
+                print(
+                    f"There was an error with client {self.actuator_port}: {e}")
+                sock.close()
+
+
     def setup_tcp_client(self, ip, port):
         # Create a TCP socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
