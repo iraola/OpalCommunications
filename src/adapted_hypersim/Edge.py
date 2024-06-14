@@ -25,7 +25,7 @@ class Edge():
         self.hyp_actuators_port = int(actuator_port) + 2
         self.udp_sensors_port = int(udp_sensors_port)
         self.tcp_sensors_port = int(tcp_sensors_port)
-        self.actuators_port = int(actuator_port)
+        self.tcp_actuators_port = int(actuator_port)
 
         self.devices_udp = {}
         self.devices_tcp = {}
@@ -56,15 +56,17 @@ class Edge():
     def set_sensors_data(self, decoded_data):
         # Input the actuators data to the Hypersim model using the HyWorksApi library
         i = 0
+        modified = False
         for dev_name in self.devices_tcp:
             for sensor in self.devices_tcp[dev_name][0]:
                 if decoded_data[i] != float('-inf'):
+                    modified = True
                     print(
                         f"Setting value {sensor} from device {dev_name}, edge {self.label}")
                     HyWorksApi.setComponentParameter(dev_name.split()[-1], sensor, decoded_data[i])
                 i = i + 1
 
-        print(f"Data updated in {self.label}")
+        if modified: print(f"Data updated in {self.label}")
 
     ################### UDP SENSORS ########################
     def run_udp_sensors_socket(self):
@@ -152,39 +154,37 @@ class Edge():
     def run_tcp_actuators_socket(self):
         while True:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(("0.0.0.0", self.hyp_tcp_sensors_port))
+            sock.bind((self.local_IP, self.tcp_actuators_port))
             sock.listen()
             print(
-                f"Server listening at 0.0.0.0:{self.hyp_tcp_sensors_port}\n")
+                f"Server listening at {self.local_IP}:{self.tcp_actuators_port}\n")
 
             conn, address = sock.accept()
             print(f"Accepted connexion from {address}, {self.label}")
             try:
                 while True:
-                    message_length = conn.recv(4)
-                    message_length = struct.unpack('I', message_length)
-                    print("Message_length: ", message_length)
-
-                    message_bytes = conn.recv(message_length[0] * 4)
-
+                    message_length = max(max(values[1]) for values in self.devices_tcp.values()) + 1
+                    print("Message length: ", message_length)
+                    
+                    message_bytes = conn.recv(message_length*4)
                     # Process the message bytes containing the floats
-                    received_floats = struct.unpack('!' + 'f' * message_length[0],
+                    received_floats = struct.unpack('!' + 'f' * message_length,
                                                     message_bytes)
                     # Handle the received floats
                     print("Received", len(received_floats), "floats:")
                     for f in received_floats:
                         print(f)
 
-                    # Read the end-of-line character to indicate the end of the message
+                    """# Read the end-of-line character to indicate the end of the message
                     eol = conn.recv(1)
                     print(eol)
                     if eol != b'\n':
                          print("Invalid end-of-line character")
-                         continue
+                         continue"""
                     self.set_sensors_data(received_floats)
             except Exception as e:
                 print(
-                    f"There was an error with client {self.actuator_port}: {e}")
+                    f"There was an error with client {self.tcp_actuators_port}: {e}")
                 sock.close()
 
 

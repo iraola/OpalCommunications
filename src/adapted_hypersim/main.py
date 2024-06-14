@@ -9,14 +9,18 @@ from utils import hypersim_setup
 
 def main():
     edge_list = get_json_data()
-    cont = 0
     hypersim_setup()
     for edge in edge_list:
-        #t = threading.Thread(target=edge.run_udp_sensors_socket, args=())
-        #edge.run_tcp_sensors_socket()
-        edge.run_tcp_actuators_socket()
-        #t.start()
-        #t.join()
+        if edge.label == "edge4": continue
+        t1 = threading.Thread(target=edge.run_udp_sensors_socket, args=())
+        t2 = threading.Thread(target=edge.run_tcp_sensors_socket, args=())
+        t3 = threading.Thread(target=edge.run_tcp_actuators_socket, args=())
+        t1.start()
+        t2.start()
+        t3.start()
+    t1.join()
+    t2.join()
+    t3.join()
 
 
 def get_json_data():

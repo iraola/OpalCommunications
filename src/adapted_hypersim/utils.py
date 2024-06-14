@@ -13,6 +13,10 @@ def hypersim_setup():
     designPath = r"C:\Users\Hypersim\Documents\marcel\HYPERSIM\HYPERSIM_IEEE9Bus_50Hz\HVAC_230kV_9bus_IEEE.ecf"
     print(designPath)
     HyWorksApi.openDesign(designPath) 
+    try:
+        HyWorksApi.startSim()
+    except:
+        print("Simulation is already running")
 
 def get_type_values(driver, types, indexes):
     suffix = driver.split(".")[-1]
