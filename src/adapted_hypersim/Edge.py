@@ -5,7 +5,8 @@ import sys
 import threading
 import time
 
-from utils import get_type_values
+from utils import get_type_values, get_last_int
+
 hypersimDir = r"C:\\OPAL-RT\\HYPERSIM\\hypersim_2024.1.0.o39"
 if not os.path.isdir(hypersimDir):
     print("INVALID HYPERSIM DIRECTORY SPECIFIED IN THE SCRIPT")
@@ -15,7 +16,8 @@ import HyWorksApiGRPC as HyWorksApi
 
 
 class Edge():
-    def __init__(self, label, tcp_sensors_port, udp_sensors_port, actuator_port):
+    def __init__(self, label, tcp_sensors_port, udp_sensors_port,
+                 actuator_port):
         self.label = label
         self.local_IP = '0.0.0.0'
         self.remote_IP = '172.31.144.1'
@@ -42,12 +44,13 @@ class Edge():
                 self.devices_udp[device_name] = values
             else:
                 print("Protocol not recognized")
-    
+
     def get_sensors_data(self, device):
         data = []
         if "CB" in device:
             for sensor in self.devices_tcp[device][0]:
-                data.append(HyWorksApi.getLastSensorValues([f"{device}.{sensor}"])[0])
+                data.append(
+                    HyWorksApi.getLastSensorValues([f"{device}.{sensor}"])[0])
         else:
             for sensor in self.devices_tcp[device][0]:
                 data.append(HyWorksApi.getComponentParameter(device, sensor))
@@ -58,15 +61,31 @@ class Edge():
         i = 0
         modified = False
         for dev_name in self.devices_tcp:
-            for sensor in self.devices_tcp[dev_name][0]:
+            cb_value = 0
+            sensors_names = self.devices_tcp[dev_name][0]
+            for sensor in sensors_names:
                 if decoded_data[i] != float('-inf'):
                     modified = True
                     print(
                         f"Setting value {sensor} from device {dev_name}, edge {self.label}")
-                    HyWorksApi.setComponentParameter(dev_name.split()[-1], sensor, decoded_data[i])
+                    if "CB" in dev_name:
+                        # Convert decoded data to a unique int
+                        # Example: 1             1             1           =>
+                        #       => 0*2^(3-1-0) + 1*2^(3-1-1) + 1*2^(3-1-2) =>
+                        #       => 4           + 2           + 1           =>
+                        #       => 7
+                        cb_value += decoded_data[i] * pow(2, sensors_names.size() - 1 - i)
+                    else:
+                        HyWorksApi.setComponentParameter(dev_name,
+                                                         sensor, decoded_data[i])
                 i = i + 1
+            if "CB" in dev_name:
+                last_int = get_last_int(dev_name)
+                HyWorksApi.setComponentParameter(f"Const{last_int}",
+                                                 "K", cb_value)
 
         if modified: print(f"Data updated in {self.label}")
+
 
     ################### UDP SENSORS ########################
     def run_udp_sensors_socket(self):
@@ -79,7 +98,8 @@ class Edge():
                 while True:
                     print(f"Waiting for data...{self.label}")
                     data, addr = sock.recvfrom(1024)
-                    float_size = struct.calcsize('f')  # Size of one float in bytes
+                    float_size = struct.calcsize(
+                        'f')  # Size of one float in bytes
                     num_floats = len(data) // float_size
 
                     # Unpack the floats from the data
@@ -89,7 +109,8 @@ class Edge():
                     print(f"Received {num_floats} floats")
                     print(f"Floats: {floats}")
 
-                    udp_sensors_socket.sendto(packed_data, (self.remote_IP, self.udp_sensors_port))
+                    udp_sensors_socket.sendto(packed_data, (
+                    self.remote_IP, self.udp_sensors_port))
             except socket.timeout:
                 print("Data wasn't received for 5 seconds")
             except KeyboardInterrupt:
@@ -99,13 +120,13 @@ class Edge():
                 udp_sensors_socket.close()
                 exit(0)
             except Exception as e:
-                print(f"An error occurred in the edge {self.label} in port {self.hyp_udp_sensors_port}: {e}\n")
+                print(
+                    f"An error occurred in the edge {self.label} in port {self.hyp_udp_sensors_port}: {e}\n")
             finally:
                 # Tanca el socket quan surtis del bucle
                 sock.close()
                 udp_sensors_socket.close()
                 time.sleep(5)
-
 
     def setup_udp_client(self):
         # Configure the UDP socket (as client) for the delivery of the sensors data
@@ -116,13 +137,13 @@ class Edge():
             f'UDP socket ready to send data to 0.0.0.0:{self.udp_sensors_port} ({self.label})')
         return client_socket
 
-    
+
     ################### TCP SENSORS ########################
     def run_tcp_sensors_socket(self):
         while True:
             tcp_sensors_socket = self.setup_tcp_client(self.remote_IP,
-                                                            self.tcp_sensors_port)
-            while(True):
+                                                       self.tcp_sensors_port)
+            while (True):
                 try:
                     print(self.label)
                     for device in self.devices_tcp.keys():
@@ -135,7 +156,7 @@ class Edge():
                         sensors_data = struct.pack('!I', message_length)
 
                         for f_value in data:
-                            sensors_data += struct.pack('!f', f_value) 
+                            sensors_data += struct.pack('!f', f_value)
 
                         sensors_data += struct.pack('>h', ord('\n'))
 
@@ -144,8 +165,9 @@ class Edge():
                         print(f"Sending to {self.label}...")
 
                 except Exception as e:
-                    print(f"An error occurred in the edge {self.label} in port {self.tcp_sensors_port}: {e}\n")
-                    print("closing")  
+                    print(
+                        f"An error occurred in the edge {self.label} in port {self.tcp_sensors_port}: {e}\n")
+                    print("closing")
                     tcp_sensors_socket.close()
                 time.sleep(2)
 
@@ -163,30 +185,40 @@ class Edge():
             print(f"Accepted connexion from {address}, {self.label}")
             try:
                 while True:
-                    message_length = max(max(values[1]) for values in self.devices_tcp.values()) + 1
+                    message_length = max(max(values[1]) for values in
+                                         self.devices_tcp.values()) + 1
                     print("Message length: ", message_length)
-                    
-                    message_bytes = conn.recv(message_length*4)
-                    # Process the message bytes containing the floats
+
+                    # Receive the integer containing the length of the message
+                    length_bytes = conn.recv(4)
+                    message_length_received = \
+                        struct.unpack('!I', length_bytes)[0]
+                    if message_length_received != message_length:
+                        print(
+                            "Expected length doesn't match with received length",
+                            file=sys.stderr)
+
+                    # Receive message (Float * message_length)
+                    message_bytes = conn.recv(message_length * 4)
                     received_floats = struct.unpack('!' + 'f' * message_length,
                                                     message_bytes)
-                    # Handle the received floats
-                    print("Received", len(received_floats), "floats:")
+
+                    # Receive new line character
+                    newline_bytes = conn.recv(2)
+                    newline_character = struct.unpack('>h', newline_bytes)[0]
+                    if chr(newline_character) != '\n':
+                        print("New line not found at the end of the message.",
+                              file=sys.stderr)
+
                     for f in received_floats:
                         print(f)
 
-                    """# Read the end-of-line character to indicate the end of the message
-                    eol = conn.recv(1)
-                    print(eol)
-                    if eol != b'\n':
-                         print("Invalid end-of-line character")
-                         continue"""
                     self.set_sensors_data(received_floats)
+
             except Exception as e:
                 print(
                     f"There was an error with client {self.tcp_actuators_port}: {e}")
                 sock.close()
-
 
     def setup_tcp_client(self, ip, port):
         # Create a TCP socket
