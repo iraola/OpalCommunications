@@ -55,7 +55,8 @@ class Edge():
         else:
             for sensor in self.devices_tcp[device][0]:
                 d = HyWorksApi.getComponentParameter(device, sensor)
-                data.append(d)
+                if len(d) > 0:
+                    data.append(d[0])
         return data
 
     def set_sensors_data(self, decoded_data):
