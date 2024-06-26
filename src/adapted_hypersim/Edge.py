@@ -50,13 +50,13 @@ class Edge():
         if "CB" in device:
             for sensor in self.devices_tcp[device][0]:
                 d = HyWorksApi.getLastSensorValues([f"{device}.{sensor}"])
-                if len(d) > 0:
-                    data.append(d[0])
         else:
             for sensor in self.devices_tcp[device][0]:
                 d = HyWorksApi.getComponentParameter(device, sensor)
-                if len(d) > 0:
-                    data.append(d[0])
+        if len(d) > 0:
+            data.append(d[0])
+        else:
+            data.extend([float('-inf')] * len(self.devices_tcp[device][1]))
         return data
 
     def set_sensors_data(self, decoded_data):
