@@ -19,7 +19,7 @@ class Edge():
     def __init__(self, label, tcp_sensors_port, udp_sensors_port,
                  actuator_port):
         self.label = label
-        self.local_IP = '0.0.0.0'
+        self.local_IP = '0.0.0.0'#'10.64.117.60'
         self.remote_IP = '172.31.144.1'
 
         self.hyp_udp_sensors_port = int(udp_sensors_port) + 2
@@ -49,11 +49,13 @@ class Edge():
         data = []
         if "CB" in device:
             for sensor in self.devices_tcp[device][0]:
-                data.append(
-                    HyWorksApi.getLastSensorValues([f"{device}.{sensor}"])[0])
+                d = HyWorksApi.getLastSensorValues([f"{device}.{sensor}"])
+                if len(d) > 0:
+                    data.append(d[0])
         else:
             for sensor in self.devices_tcp[device][0]:
-                data.append(HyWorksApi.getComponentParameter(device, sensor))
+                d = HyWorksApi.getComponentParameter(device, sensor)
+                data.append(d)
         return data
 
     def set_sensors_data(self, decoded_data):
@@ -61,7 +63,7 @@ class Edge():
         i = 0
         modified = False
         for dev_name in self.devices_tcp:
-            cb_value = 0
+            cb_value = -1
             sensors_names = self.devices_tcp[dev_name][0]
             for sensor in sensors_names:
                 if decoded_data[i] != float('-inf'):
@@ -69,20 +71,23 @@ class Edge():
                     print(
                         f"Setting value {sensor} from device {dev_name}, edge {self.label}")
                     if "CB" in dev_name:
+                        if cb_value == -1:
+                            cb_value = 0
                         # Convert decoded data to a unique int
                         # Example: 1             1             1           =>
-                        #       => 0*2^(3-1-0) + 1*2^(3-1-1) + 1*2^(3-1-2) =>
+                        #       => 1*2^(3-1-0) + 1*2^(3-1-1) + 1*2^(3-1-2) =>
                         #       => 4           + 2           + 1           =>
                         #       => 7
-                        cb_value += decoded_data[i] * pow(2, sensors_names.size() - 1 - i)
+                        cb_value += decoded_data[i] * pow(2, len(sensors_names) - 1 - i)
                     else:
                         HyWorksApi.setComponentParameter(dev_name,
                                                          sensor, decoded_data[i])
                 i = i + 1
-            if "CB" in dev_name:
-                last_int = get_last_int(dev_name)
-                HyWorksApi.setComponentParameter(f"Const{last_int}",
-                                                 "K", cb_value)
+            if cb_value != -1:
+                if "CB" in dev_name:
+                    last_int = get_last_int(dev_name)
+                    HyWorksApi.setComponentParameter(f"Const{last_int}",
+                                                    "K", int(cb_value))
 
         if modified: print(f"Data updated in {self.label}")
 
@@ -93,7 +98,7 @@ class Edge():
             udp_sensors_socket = self.setup_udp_client()  # TODO: check multiprocessing
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.bind(("0.0.0.0", self.hyp_udp_sensors_port))
+            sock.bind((self.local_IP, self.hyp_udp_sensors_port))
             try:
                 while True:
                     print(f"Waiting for data...{self.label}")
@@ -134,12 +139,13 @@ class Edge():
 
         # No need to connect in UDP, just send data
         print(
-            f'UDP socket ready to send data to 0.0.0.0:{self.udp_sensors_port} ({self.label})')
+            f'UDP socket ready to send data to {self.local_IP}:{self.udp_sensors_port} ({self.label})')
         return client_socket
 
 
     ################### TCP SENSORS ########################
     def run_tcp_sensors_socket(self):
+        if self.label != "edge1": return
         while True:
             tcp_sensors_socket = self.setup_tcp_client(self.remote_IP,
                                                        self.tcp_sensors_port)
