@@ -11,15 +11,15 @@ def main():
     edge_list = get_json_data()
     hypersim_setup()
     for edge in edge_list:
-        t1 = threading.Thread(target=edge.run_udp_sensors_socket, args=())
-        #t2 = threading.Thread(target=edge.run_tcp_sensors_socket, args=())
-        #t3 = threading.Thread(target=edge.run_tcp_actuators_socket, args=())
-        t1.start()
-        #t2.start()
-        #t3.start()
-    t1.join()
-    #t2.join()
-    #t3.join()
+        #t1 = threading.Thread(target=edge.run_udp_sensors_socket, args=())
+        t2 = threading.Thread(target=edge.run_tcp_sensors_socket, args=())
+        t3 = threading.Thread(target=edge.run_tcp_actuators_socket, args=())
+        #t1.start()
+        t2.start()
+        t3.start()
+    #t1.join()
+    t2.join()
+    t3.join()
 
 
 def get_json_data():
