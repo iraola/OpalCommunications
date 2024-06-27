@@ -14,6 +14,7 @@ if not os.path.isdir(hypersimDir):
 sys.path.append(os.path.join(hypersimDir, 'Windows', 'HyApi', 'python'))
 import HyWorksApiGRPC as HyWorksApi
 
+lock = threading.Lock()
 
 class Edge():
     def __init__(self, label, tcp_sensors_port, udp_sensors_port,
@@ -47,16 +48,16 @@ class Edge():
 
     def get_sensors_data(self, device):
         data = []
-        if "CB" in device:
-            for sensor in self.devices_tcp[device][0]:
-                d = HyWorksApi.getLastSensorValues([f"{device}.{sensor}"])
-        else:
-            for sensor in self.devices_tcp[device][0]:
-                d = HyWorksApi.getComponentParameter(device, sensor)
-        if len(d) > 0:
-            data.append(d[0])
-        else:
-            data.extend([float('-inf')] * len(self.devices_tcp[device][1]))
+        for sensor in self.devices_tcp[device][0]:
+            if "CB" in device:
+                with lock:
+                    d = HyWorksApi.getLastSensorValues([f"{device}.{sensor}"])
+            else:
+                with lock:
+                    d = HyWorksApi.getComponentParameter(device, sensor)
+            if len(d) > 0:
+                data.append(float(d[0]))
+            else: data.append(float('-inf'))
         return data
 
     def set_sensors_data(self, decoded_data):
@@ -74,21 +75,18 @@ class Edge():
                     if "CB" in dev_name:
                         if cb_value == -1:
                             cb_value = 0
-                        # Convert decoded data to a unique int
-                        # Example: 1             1             1           =>
-                        #       => 1*2^(3-1-0) + 1*2^(3-1-1) + 1*2^(3-1-2) =>
-                        #       => 4           + 2           + 1           =>
-                        #       => 7
-                        cb_value += decoded_data[i] * pow(2, len(sensors_names) - 1 - i)
+                        cb_value += decoded_data[i] * pow(2, i)
                     else:
-                        HyWorksApi.setComponentParameter(dev_name,
-                                                         sensor, decoded_data[i])
+                        with lock:
+                            HyWorksApi.setComponentParameter(dev_name,
+                                                            sensor, decoded_data[i])
                 i = i + 1
             if cb_value != -1:
                 if "CB" in dev_name:
                     last_int = get_last_int(dev_name)
-                    HyWorksApi.setComponentParameter(f"Const{last_int}",
-                                                    "K", int(cb_value))
+                    with lock:
+                        HyWorksApi.setComponentParameter(f"Const{last_int}",
+                                                        "K", int(cb_value))
 
         if modified: print(f"Data updated in {self.label}")
 
@@ -146,37 +144,37 @@ class Edge():
 
     ################### TCP SENSORS ########################
     def run_tcp_sensors_socket(self):
-        if self.label != "edge1": return
         while True:
             tcp_sensors_socket = self.setup_tcp_client(self.remote_IP,
                                                        self.tcp_sensors_port)
             while (True):
                 try:
-                    print(self.label)
+                    data = []
                     for device in self.devices_tcp.keys():
                         print(device)
-                        data = self.get_sensors_data(device)
-                        if len(data) == 0: continue
-                        message_length = len(data)
+                        data.extend(self.get_sensors_data(device))
 
-                        # Prepare the message
-                        sensors_data = struct.pack('!I', message_length)
+                    if len(data) == 0: continue
+                    message_length = len(data)
 
-                        for f_value in data:
-                            sensors_data += struct.pack('!f', f_value)
+                    # Prepare the message
+                    sensors_data = struct.pack('!I', message_length)
 
-                        sensors_data += struct.pack('>h', ord('\n'))
+                    for f_value in data:
+                        sensors_data += struct.pack('!f', f_value)
 
-                        tcp_sensors_socket.send(sensors_data)
-                        print(f"Sending {sensors_data}...")
-                        print(f"Sending to {self.label}...")
+                    sensors_data += struct.pack('>h', ord('\n'))
+
+                    tcp_sensors_socket.send(sensors_data)
+                    print(f"Sending {sensors_data}...")
+                    print(f"Sending to {self.label}...")
 
                 except Exception as e:
                     print(
                         f"An error occurred in the edge {self.label} in port {self.tcp_sensors_port}: {e}\n")
                     print("closing")
                     tcp_sensors_socket.close()
-                time.sleep(2)
+                time.sleep(10)
 
 
     ################### TCP ACTUATORS ######################
