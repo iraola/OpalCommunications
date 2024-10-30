@@ -1,3 +1,13 @@
+"""
+This class is in charge of running the sockets, which are bridges between the
+edges and the Opal. These sockets can use tcp (actuators and some sensors) or
+udp (sensors) protocols.
+
+Usage: python adapted_hypersim.py [protocol]
+Supported protocols = "udp"/"tcp"
+Default: protocol = "udp"
+"""
+
 import os
 import json
 import sys
@@ -7,20 +17,29 @@ from Edge import Edge
 from utils import hypersim_setup
 
 
-def main():
+def main(protocol):
     edge_list = get_json_data()
     hypersim_setup()
-    for edge in edge_list:
-        t1 = threading.Thread(target=edge.run_udp_sensors_socket, args=())
-        #t2 = threading.Thread(target=edge.run_tcp_sensors_socket, args=())
-        #t3 = threading.Thread(target=edge.run_tcp_actuators_socket, args=())
-        t1.start()
-        #t2.start()
-        #t3.start()
-    t1.join()
-    #t2.join()
-    #t3.join()
 
+    if protocol != "udp" and protocol != "tcp":
+        raise Exception("Protocol must be udp or tcp")
+
+    threads = []
+    for edge in edge_list:
+        if protocol == "udp":
+            t1 = threading.Thread(target=edge.run_udp_sensors_socket, args=())
+            t1.start()
+            threads.append(t1)
+        else:
+            t2 = threading.Thread(target=edge.run_tcp_sensors_socket, args=())
+            t3 = threading.Thread(target=edge.run_tcp_actuators_socket, args=())
+            t2.start()
+            t3.start()
+            threads.append(t2)
+            threads.append(t3)
+
+    for t in threads:
+        t.join()
 
 def get_json_data():
     current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -57,4 +76,8 @@ def get_json_data():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        protocol = "udp"
+    else:
+        protocol = sys.argv[1]
+    main(protocol)
