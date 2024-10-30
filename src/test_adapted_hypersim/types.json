@@ -1,8 +1,0 @@
-{
-  "Voltmeter": ["OpalVoltmeter", "VirtualVoltmeter"],
-  "Ammeter": ["OpalAmmeter", "VirtualAmmeter"],
-  "Switch": ["OpalSwitch", "VirtualSwitch"],
-  "Wattmeter": ["OpalWattmeter", "VirtualWattmeter"],
-  "Varmeter": ["OpalVarmeter", "VirtualVarmeter"],
-  "Generator": ["OpalGenerator", "VirtualGenerator"]
-}
