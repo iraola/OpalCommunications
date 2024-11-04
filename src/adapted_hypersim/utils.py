@@ -20,7 +20,7 @@ def hypersim_setup():
     import HyWorksApiGRPC as HyWorksApi
     HyWorksApi.startAndConnectHypersim()
     print(os.path.realpath(__file__))
-    designPath = r"C:\Users\Hypersim\Documents\marcel\HYPERSIM\HYPERSIM_IEEE9Bus_50Hz\HVAC_230kV_9bus_IEEE.ecf"
+    designPath = r"C:\Users\Hypersim\Documents\docs hypersim\HYPERSIM\HYPERSIM_IEEE9Bus_50Hz\HVAC_230kV_9bus_IEEE.ecf"
     print(designPath)
     HyWorksApi.openDesign(designPath) 
     try:
