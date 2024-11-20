@@ -2,8 +2,8 @@ import json
 import os
 
 class Edge():
-    def __init__(self, edge_name, sensor_port, actuator_port, devices):
-        self.edge_name = edge_name
+    def __init__(self, label, sensor_port, actuator_port, devices):
+        self.label = label
         self.sensor_port = sensor_port
         self.actuator_port = actuator_port
         self.devices = devices

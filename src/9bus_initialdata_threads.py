@@ -39,13 +39,27 @@ for clau, valor in diccionari_nodes.items():
         objectes_socket_tcp[clau] = objecte
         print(f"Clau: {clau}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")
 '''
-        
 
 classes_edge = get_json_data()
+"""
+for edges in classes_edge:
+    edge.run_sensors_socket() #declare #connect #handle
+    edge.run_actuators_socket() #declare #connect #handle
+    
+edge: añadir atributo socket
+
+Incluir en la clase edge las funciones de los socket (que utilicen edge)
+
+Refactor (nombres más explicativos)
+
+Separar clase edge en archivo aparte 
+"""
+
+
 for edge in classes_edge:
     if edge.devices != {}:
-        objecte = socketTCP(edge.edge_name, edge.sensor_port, edge.devices)
-        objectes_socket_tcp[edge.edge_name] = objecte
+        objecte = socketTCP(edge.label, edge.sensor_port, edge.devices)
+        objectes_socket_tcp[edge.label] = objecte
         print(f"Clau: {objecte.nom_edge}, Port Server: {objecte.portServer}, Port Client: {objecte.portClient}")
 
 
