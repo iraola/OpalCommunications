@@ -20,8 +20,8 @@ class Edge():
     def __init__(self, label, tcp_sensors_port, udp_sensors_port,
                  actuator_port):
         self.label = label
-        self.local_IP = '0.0.0.0'#'10.64.117.60'
-        self.remote_IP = '172.31.144.1'
+        self.local_IP = '127.0.0.1'#'10.64.117.60'
+        self.remote_IP = '127.0.0.1'
 
         self.hyp_udp_sensors_port = int(udp_sensors_port) + 2
         self.hyp_tcp_sensors_port = int(tcp_sensors_port) + 2
@@ -98,6 +98,7 @@ class Edge():
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.bind((self.local_IP, self.hyp_udp_sensors_port))
+            print(f"UDP socket reading through {self.local_IP}:{self.hyp_udp_sensors_port}")
             try:
                 while True:
                     print(f"Waiting for data...{self.label}")
@@ -138,7 +139,7 @@ class Edge():
 
         # No need to connect in UDP, just send data
         print(
-            f'UDP socket ready to send data to {self.local_IP}:{self.udp_sensors_port} ({self.label})')
+            f'UDP socket ready to send data to {self.remote_IP}:{self.udp_sensors_port} ({self.label})')
         return client_socket
 
 
@@ -151,7 +152,6 @@ class Edge():
                 try:
                     data = []
                     for device in self.devices_tcp.keys():
-                        print(device)
                         data.extend(self.get_sensors_data(device))
 
                     if len(data) == 0: continue
@@ -165,9 +165,9 @@ class Edge():
 
                     sensors_data += struct.pack('>h', ord('\n'))
 
-                    tcp_sensors_socket.send(sensors_data)
                     print(f"Sending {sensors_data}...")
                     print(f"Sending to {self.label}...")
+                    tcp_sensors_socket.send(sensors_data)
 
                 except Exception as e:
                     print(

@@ -20,7 +20,6 @@ from utils import hypersim_setup
 def main(protocol):
     edge_list = get_json_data()
     hypersim_setup()
-
     if protocol != "udp" and protocol != "tcp":
         raise Exception("Protocol must be udp or tcp")
 
@@ -31,11 +30,11 @@ def main(protocol):
             t1.start()
             threads.append(t1)
         else:
-            t2 = threading.Thread(target=edge.run_tcp_sensors_socket, args=())
+            #t2 = threading.Thread(target=edge.run_tcp_sensors_socket, args=())
             t3 = threading.Thread(target=edge.run_tcp_actuators_socket, args=())
-            t2.start()
+            #t2.start()
             t3.start()
-            threads.append(t2)
+            #threads.append(t2)
             threads.append(t3)
 
     for t in threads:
@@ -52,8 +51,8 @@ def get_json_data():
     # d_actuators = {}
     with open(os.path.join(current_directory, "types.json")) as file:
         types = json.load(file)
-
     for file in os.listdir(ruta_fitxers):
+        print(file)
         adr_edge = os.path.join(ruta_fitxers, file)
         with open(adr_edge, 'r') as file:
             # Llegir el contingut del fitxer
@@ -77,7 +76,7 @@ def get_json_data():
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        protocol = "udp"
+        protocol = "tcp"
     else:
         protocol = sys.argv[1]
     main(protocol)
