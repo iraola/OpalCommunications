@@ -1,9 +1,10 @@
 import os
+import sys
 import socket
 import struct
-import sys
-import threading
 import time
+import threading
+import psutil
 
 from utils import get_type_values, get_last_int
 
@@ -16,17 +17,22 @@ import HyWorksApiGRPC as HyWorksApi
 
 lock = threading.Lock()
 
-class Edge():
-    def __init__(self, label, tcp_sensors_port, udp_sensors_port,
-                 actuator_port):
+class Edge:
+    def __init__(self, label, tcp_sensors_port, udp_sensors_port, actuator_port):
         self.label = label
         self.local_IP = '127.0.0.1'#'10.64.117.60'
         self.remote_IP = '127.0.0.1'
 
         self.hyp_udp_sensors_port = int(udp_sensors_port) + 2
+        self.udp_sensors_port = int(udp_sensors_port)
+        self.packets_received = 0
+        self.packets_processed = 0
+        self.total_processing_time = 0.0
+        self.monitor_flag = True
+        self.monitor_lock = threading.Lock()
+
         self.hyp_tcp_sensors_port = int(tcp_sensors_port) + 2
         self.hyp_actuators_port = int(actuator_port) + 2
-        self.udp_sensors_port = int(udp_sensors_port)
         self.tcp_sensors_port = int(tcp_sensors_port)
         self.tcp_actuators_port = int(actuator_port)
 
@@ -57,7 +63,8 @@ class Edge():
                     d = HyWorksApi.getComponentParameter(device, sensor)
             if len(d) > 0:
                 data.append(float(d[0]))
-            else: data.append(float('-inf'))
+            else:
+                data.append(float('-inf'))
         return data
 
     def set_sensors_data(self, decoded_data):
@@ -79,68 +86,79 @@ class Edge():
                     else:
                         with lock:
                             HyWorksApi.setComponentParameter(dev_name,
-                                                            sensor, decoded_data[i])
+                                                             sensor,
+                                                             decoded_data[i])
                 i = i + 1
             if cb_value != -1:
                 if "CB" in dev_name:
                     last_int = get_last_int(dev_name)
                     with lock:
                         HyWorksApi.setComponentParameter(f"Const{last_int}",
-                                                        "K", int(cb_value))
+                                                         "K", int(cb_value))
 
         if modified: print(f"Data updated in {self.label}")
 
-
     ################### UDP SENSORS ########################
     def run_udp_sensors_socket(self):
-        while True:
-            udp_sensors_socket = self.setup_udp_client()  # TODO: check multiprocessing
+        udp_sensors_socket = self.setup_udp_client()
 
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.bind((self.local_IP, self.hyp_udp_sensors_port))
-            print(f"UDP socket reading through {self.local_IP}:{self.hyp_udp_sensors_port}")
-            try:
-                while True:
-                    print(f"Waiting for data...{self.label}")
-                    data, addr = sock.recvfrom(1024)
-                    float_size = struct.calcsize(
-                        'f')  # Size of one float in bytes
-                    num_floats = len(data) // float_size
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((self.local_IP, self.hyp_udp_sensors_port))
+        try:
+            while True:
+                data, addr = sock.recvfrom(1024)
+                start_time = time.time()
 
-                    # Unpack the floats from the data
-                    floats = struct.unpack('f' * num_floats, data)
-                    packed_data = struct.pack('!' + 'f' * num_floats, *floats)
+                float_size = struct.calcsize('f')
+                num_floats = len(data) // float_size
 
-                    print(f"Received {num_floats} floats")
-                    print(f"Floats: {floats}")
+                floats = struct.unpack('f' * num_floats, data)
+                packed_data = struct.pack('!' + 'f' * num_floats, *floats)
 
-                    udp_sensors_socket.sendto(packed_data, (
-                    self.remote_IP, self.udp_sensors_port))
-            except socket.timeout:
-                print("Data wasn't received for 5 seconds")
-            except KeyboardInterrupt:
-                print(
-                    '\nKeyboard interrupt detected. Closing socket..')
-                sock.close()
-                udp_sensors_socket.close()
-                exit(0)
-            except Exception as e:
-                print(
-                    f"An error occurred in the edge {self.label} in port {self.hyp_udp_sensors_port}: {e}\n")
-            finally:
-                # Tanca el socket quan surtis del bucle
-                sock.close()
-                udp_sensors_socket.close()
-                time.sleep(5)
+                udp_sensors_socket.sendto(packed_data, (self.remote_IP, self.udp_sensors_port))
+
+                end_time = time.time()
+                processing_time = end_time - start_time
+
+                with self.monitor_lock:
+                    self.packets_received += 1
+                    self.packets_processed += 1
+                    self.total_processing_time += processing_time
+
+        except Exception as e:
+            print(f"Error in {self.label}: {e}")
+        finally:
+            sock.close()
+            udp_sensors_socket.close()
+
+    def monitor_udp(self):
+        while self.monitor_flag:
+            time.sleep(10)
+            with self.monitor_lock:
+                if self.packets_received > 0:
+                    avg_processing_time = self.total_processing_time / self.packets_processed
+                else:
+                    avg_processing_time = 0.0
+
+                print(f"{self.label}:")
+                print(f" - Packets Received: {self.packets_received}")
+                print(f" - Packets Processed: {self.packets_processed}")
+                print(f" - Average Processing Time: {avg_processing_time:.4f}s")
+
+                self.packets_received = 0
+                self.packets_processed = 0
+                self.total_processing_time = 0.0
 
     def setup_udp_client(self):
-        # Configure the UDP socket (as client) for the delivery of the sensors data
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # No need to connect in UDP, just send data
         print(
             f'UDP socket ready to send data to {self.remote_IP}:{self.udp_sensors_port} ({self.label})')
         return client_socket
+
+    def stop_monitoring(self):
+        self.monitor_flag = False
 
 
     ################### TCP SENSORS ########################

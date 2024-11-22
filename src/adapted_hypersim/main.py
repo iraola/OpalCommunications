@@ -29,6 +29,11 @@ def main(protocol):
             t1 = threading.Thread(target=edge.run_udp_sensors_socket, args=())
             t1.start()
             threads.append(t1)
+
+            t2 = threading.Thread(target=edge.monitor_udp, args=())
+            t2.start()
+            threads.append(t2)
+
         else:
             #t2 = threading.Thread(target=edge.run_tcp_sensors_socket, args=())
             t3 = threading.Thread(target=edge.run_tcp_actuators_socket, args=())
