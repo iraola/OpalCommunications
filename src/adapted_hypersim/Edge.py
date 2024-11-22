@@ -18,7 +18,7 @@ import HyWorksApiGRPC as HyWorksApi
 lock = threading.Lock()
 
 class Edge:
-    def __init__(self, label, tcp_sensors_port, udp_sensors_port, actuator_port):
+    def __init__(self, label, tcp_sensors_port, udp_sensors_port, actuator_port, print_lock):
         self.label = label
         self.local_IP = '127.0.0.1'#'10.64.117.60'
         self.remote_IP = '127.0.0.1'
@@ -38,6 +38,8 @@ class Edge:
 
         self.devices_udp = {}
         self.devices_tcp = {}
+
+        self.print_lock = print_lock
 
     def add_device(self, device_name, indexes, protocol, driver, types):
         values = get_type_values(driver, types, indexes)
@@ -140,10 +142,13 @@ class Edge:
                 else:
                     avg_processing_time = 0.0
 
-                print(f"{self.label}:")
-                print(f" - Packets Received: {self.packets_received}")
-                print(f" - Packets Processed: {self.packets_processed}")
-                print(f" - Average Processing Time: {avg_processing_time:.4f}s")
+                with self.print_lock:
+                    print(f"{self.label}:")
+                    print(f" - Packets Received: {self.packets_received}")
+                    print(f" - Packets Processed: {self.packets_processed}")
+                    print(f" - Average Processing Time: {avg_processing_time:.4f}s")
+                    print("----------------------------------------")
+                    print()
 
                 self.packets_received = 0
                 self.packets_processed = 0

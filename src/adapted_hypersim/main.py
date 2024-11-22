@@ -54,6 +54,8 @@ def get_json_data():
     edge_list = []
     # d_sensors = {}
     # d_actuators = {}
+
+    print_lock = threading.Lock()
     with open(os.path.join(current_directory, "types.json")) as file:
         types = json.load(file)
     for file in os.listdir(ruta_fitxers):
@@ -66,7 +68,7 @@ def get_json_data():
             tcp_sensors_port = data['global-properties']['comms']['opal-tcp']['sensors']['port']
             udp_sensors_port = data['global-properties']['comms']['opal-udp']['sensors']['port']
             actuadors_port = data['global-properties']['comms']['opal-tcp']['actuators']['port']
-            objecte_edge = Edge(edge_name, tcp_sensors_port, udp_sensors_port, actuadors_port)
+            objecte_edge = Edge(edge_name, tcp_sensors_port, udp_sensors_port, actuadors_port, print_lock)
 
             for device in data['devices']:
                 device_name = device['label']
@@ -81,7 +83,7 @@ def get_json_data():
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        protocol = "tcp"
+        protocol = "udp"
     else:
         protocol = sys.argv[1]
     main(protocol)
