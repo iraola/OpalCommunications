@@ -1,6 +1,124 @@
 import os
 import sys
 import re
+import sqlite3
+from datetime import datetime
+import time
+import psutil
+
+
+def main_monitor():
+    """Run main monitor db"""
+    initialize_database("main.db")
+    while True:
+        time.sleep(10)
+        collected_data = read_all_databases_and_collect_data()
+
+        print_metrics("Main monitor", 
+                    collected_data['packets_received'], 
+                    collected_data['packets_processed'], 
+                    collected_data['avg_processing_time'], 
+                    collected_data['cpu_usage'])
+        
+        record_metrics_in_database("main.db", 
+                    collected_data['packets_received'], 
+                    collected_data['packets_processed'], 
+                    collected_data['avg_processing_time'], 
+                    collected_data['cpu_usage'])
+
+
+def read_all_databases_and_collect_data():
+    """Read all edge*.db files and collect the data from the udp_monitor table."""
+    db_files = [f for f in os.listdir('.') if re.match(r'edge\d+\.db', f)]
+
+    collected_data = {}
+
+    for db_file in db_files:
+        initialize_database(db_file)
+
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
+
+        cursor.execute('''SELECT timestamp, packets_received, packets_processed, avg_processing_time, cpu_usage
+                          FROM udp_monitor ORDER BY id DESC LIMIT 1''')
+
+        result = cursor.fetchone()
+
+        if result:
+            timestamp, packets_received, packets_processed, avg_processing_time, cpu_usage = result
+
+            collected_data['timestamp'] = timestamp
+
+            if 'packets_received' in collected_data:
+               collected_data['packets_received'] = collected_data['packets_received'] + packets_received
+            else: 
+                collected_data['packets_received'] = packets_received
+
+            if 'packets_processed' in collected_data:
+               collected_data['packets_processed'] = collected_data['packets_processed'] + packets_processed
+            else: 
+                collected_data['packets_processed'] = packets_processed
+            
+            if 'avg_processing_time' in collected_data:
+                collected_data['avg_processing_time'] = collected_data['avg_processing_time'] + avg_processing_time
+            else:
+                collected_data['avg_processing_time'] = avg_processing_time
+
+            collected_data['cpu_usage'] = cpu_usage
+
+        conn.close()
+
+    collected_data['avg_processing_time'] = collected_data['avg_processing_time'] / len(db_files)
+    return collected_data
+
+
+def initialize_database(db_path):
+    """Create the database and table if they don't exist."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS udp_monitor (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            packets_received INTEGER NOT NULL,
+            packets_processed INTEGER NOT NULL,
+            avg_processing_time REAL NOT NULL,
+            cpu_usage REAL NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+def calculate_average_processing_time(total_processing_time, packets_processed):
+    """Calculate the average processing time."""
+    if packets_processed > 0:
+        return total_processing_time / packets_processed
+    return 0.0
+
+
+def record_metrics_in_database(db_path, packets_received, packets_processed, avg_processing_time, cpu_usage):
+    """Insert the metrics into the database."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    cursor.execute('''
+        INSERT INTO udp_monitor (timestamp, packets_received, packets_processed, avg_processing_time, cpu_usage)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (timestamp, packets_received, packets_processed, avg_processing_time, cpu_usage))
+    conn.commit()
+    conn.close()
+
+
+def print_metrics(label, packets_received, packets_processed, avg_processing_time, cpu_usage):
+    """Print the metrics to the console."""
+    print(f"{label}:")
+    print(f" - Packets Received: {packets_received}")
+    print(f" - Packets Processed: {packets_processed}")
+    print(f" - Average Processing Time: {avg_processing_time:.4f}s")
+    print(f"System CPU usage: {cpu_usage}%")
+    print("----------------------------------------")
+    print()
 
 
 def get_last_int(cadena):
@@ -27,6 +145,7 @@ def hypersim_setup():
         HyWorksApi.startSim()
     except:
         print("Simulation is already running")
+
 
 def get_type_values(driver, types, indexes):
     suffix = driver.split(".")[-1]

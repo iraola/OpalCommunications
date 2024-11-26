@@ -5,8 +5,10 @@ import struct
 import time
 import threading
 import psutil
+import sqlite3
 
-from utils import get_type_values, get_last_int
+
+from utils import *
 
 hypersimDir = r"C:\\OPAL-RT\\HYPERSIM\\hypersim_2024.1.0.o39"
 if not os.path.isdir(hypersimDir):
@@ -18,18 +20,13 @@ import HyWorksApiGRPC as HyWorksApi
 lock = threading.Lock()
 
 class Edge:
-    def __init__(self, label, tcp_sensors_port, udp_sensors_port, actuator_port, print_lock):
+    def __init__(self, label, tcp_sensors_port, udp_sensors_port, actuator_port, monitor_flag):
         self.label = label
         self.local_IP = '127.0.0.1'#'10.64.117.60'
         self.remote_IP = '127.0.0.1'
 
         self.hyp_udp_sensors_port = int(udp_sensors_port) + 2
         self.udp_sensors_port = int(udp_sensors_port)
-        self.packets_received = 0
-        self.packets_processed = 0
-        self.total_processing_time = 0.0
-        self.monitor_flag = True
-        self.monitor_lock = threading.Lock()
 
         self.hyp_tcp_sensors_port = int(tcp_sensors_port) + 2
         self.hyp_actuators_port = int(actuator_port) + 2
@@ -39,7 +36,15 @@ class Edge:
         self.devices_udp = {}
         self.devices_tcp = {}
 
-        self.print_lock = print_lock
+        if monitor_flag:
+            self.monitor_flag = True
+            self.monitor_lock = threading.Lock()
+            self.packets_received = 0
+            self.packets_processed = 0
+            self.total_processing_time = 0.0
+            self.db_path = f"{self.label}.db"
+            initialize_database(self.db_path)
+
 
     def add_device(self, device_name, indexes, protocol, driver, types):
         values = get_type_values(driver, types, indexes)
@@ -102,6 +107,9 @@ class Edge:
 
     ################### UDP SENSORS ########################
     def run_udp_sensors_socket(self):
+        if self.monitor_flag:
+            threading.Thread(target=self.monitor_udp, args=()).start()
+
         udp_sensors_socket = self.setup_udp_client()
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -134,25 +142,34 @@ class Edge:
             udp_sensors_socket.close()
 
     def monitor_udp(self):
+        """Main monitoring loop."""
         while self.monitor_flag:
             time.sleep(10)
+
             with self.monitor_lock:
-                if self.packets_received > 0:
-                    avg_processing_time = self.total_processing_time / self.packets_processed
-                else:
-                    avg_processing_time = 0.0
+                avg_processing_time = calculate_average_processing_time(
+                    self.total_processing_time, self.packets_processed)
+                cpu_usage = psutil.cpu_percent()
 
-                with self.print_lock:
-                    print(f"{self.label}:")
-                    print(f" - Packets Received: {self.packets_received}")
-                    print(f" - Packets Processed: {self.packets_processed}")
-                    print(f" - Average Processing Time: {avg_processing_time:.4f}s")
-                    print("----------------------------------------")
-                    print()
-
+                record_metrics_in_database(
+                    self.db_path,
+                    self.packets_received,
+                    self.packets_processed,
+                    avg_processing_time,
+                    cpu_usage
+                )
+                """print_metrics(
+                    self.label,
+                    self.packets_received,
+                    self.packets_processed,
+                    avg_processing_time,
+                    cpu_usage,
+                    self.print_lock
+                )"""
                 self.packets_received = 0
                 self.packets_processed = 0
                 self.total_processing_time = 0.0
+
 
     def setup_udp_client(self):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

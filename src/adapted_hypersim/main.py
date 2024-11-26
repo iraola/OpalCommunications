@@ -14,11 +14,11 @@ import sys
 import threading
 
 from Edge import Edge
-from utils import hypersim_setup
+from utils import *
 
 
-def main(protocol):
-    edge_list = get_json_data()
+def main(protocol, monitor):
+    edge_list = get_json_data(monitor)
     hypersim_setup()
     if protocol != "udp" and protocol != "tcp":
         raise Exception("Protocol must be udp or tcp")
@@ -30,10 +30,6 @@ def main(protocol):
             t1.start()
             threads.append(t1)
 
-            t2 = threading.Thread(target=edge.monitor_udp, args=())
-            t2.start()
-            threads.append(t2)
-
         else:
             #t2 = threading.Thread(target=edge.run_tcp_sensors_socket, args=())
             t3 = threading.Thread(target=edge.run_tcp_actuators_socket, args=())
@@ -41,11 +37,15 @@ def main(protocol):
             t3.start()
             #threads.append(t2)
             threads.append(t3)
+    
+    t4 = threading.Thread(target=main_monitor, args=())
+    t4.start()
+    threads.append(t4)
 
     for t in threads:
         t.join()
 
-def get_json_data():
+def get_json_data(monitor):
     current_directory = os.path.dirname(os.path.abspath(__file__))
 
     # Crear la ruta al fitxer JSON a partir de la ruta de l'script
@@ -55,7 +55,6 @@ def get_json_data():
     # d_sensors = {}
     # d_actuators = {}
 
-    print_lock = threading.Lock()
     with open(os.path.join(current_directory, "types.json")) as file:
         types = json.load(file)
     for file in os.listdir(ruta_fitxers):
@@ -68,7 +67,7 @@ def get_json_data():
             tcp_sensors_port = data['global-properties']['comms']['opal-tcp']['sensors']['port']
             udp_sensors_port = data['global-properties']['comms']['opal-udp']['sensors']['port']
             actuadors_port = data['global-properties']['comms']['opal-tcp']['actuators']['port']
-            objecte_edge = Edge(edge_name, tcp_sensors_port, udp_sensors_port, actuadors_port, print_lock)
+            objecte_edge = Edge(edge_name, tcp_sensors_port, udp_sensors_port, actuadors_port, monitor)
 
             for device in data['devices']:
                 device_name = device['label']
@@ -82,8 +81,13 @@ def get_json_data():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        protocol = "udp"
-    else:
-        protocol = sys.argv[1]
-    main(protocol)
+    protocol = "udp"
+    monitor = True
+
+    if len(sys.argv) > 1:
+        if "tcp" in sys.argv or "udp" in sys.argv:
+            protocol = "tcp" if "tcp" in sys.argv else "udp"
+        if "--no-monitor" in sys.argv:
+            monitor = False
+
+    main(protocol, monitor)
