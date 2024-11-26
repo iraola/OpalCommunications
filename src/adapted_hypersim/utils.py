@@ -5,14 +5,53 @@ import sqlite3
 from datetime import datetime
 import time
 import psutil
+import matplotlib.pyplot as plt
+from collections import deque
 
+
+PACKET_HISTORY = deque(maxlen=30)
+CPU_HISTORY = deque(maxlen=30)
+AVG_PROCESSING_TIME_HISTORY = deque(maxlen=30)
+TIME_HISTORY = deque(maxlen=30)
+
+def update_plot():
+    """Updates the plot with the most recent data."""
+    plt.clf()
+    plt.subplot(311)
+    plt.plot(TIME_HISTORY, PACKET_HISTORY, label="Packets Received")
+    plt.title("Packets Received Over Time")
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("Packets Received")
+    
+    plt.subplot(312)  # Plot for Avg Processing Time
+    plt.plot(TIME_HISTORY, AVG_PROCESSING_TIME_HISTORY, label="Average Processing Time", color='orange')
+    plt.title("Average Processing Time Over Time")
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("Avg Processing Time (s)")
+    
+    plt.subplot(313) 
+    plt.plot(TIME_HISTORY, CPU_HISTORY, label="CPU Usage", color='green')
+    plt.title("CPU Usage Over Time")
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("CPU Usage (%)")
+    
+    plt.tight_layout()
+    plt.pause(0.1)  
 
 def main_monitor():
-    """Run main monitor db"""
     initialize_database("main.db")
+    plt.ion()
     while True:
         time.sleep(10)
         collected_data = read_all_databases_and_collect_data()
+        
+        current_time = time.time()
+        TIME_HISTORY.append(current_time)
+        PACKET_HISTORY.append(collected_data['packets_received'])
+        CPU_HISTORY.append(collected_data['cpu_usage'])
+        AVG_PROCESSING_TIME_HISTORY.append(collected_data['avg_processing_time'])
+        
+        update_plot()
 
         print_metrics("Main monitor", 
                     collected_data['packets_received'], 
