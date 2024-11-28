@@ -21,13 +21,13 @@ def update_plot():
     plt.plot(TIME_HISTORY, PACKET_HISTORY, label="Packets Received")
     plt.title("Packets Received Over Time")
     plt.xlabel("Time (seconds)")
-    plt.ylabel("Packets Received")
+    plt.ylabel("Packets Received (in 5s)")
     
-    plt.subplot(312)  # Plot for Avg Processing Time
+    plt.subplot(312)
     plt.plot(TIME_HISTORY, AVG_PROCESSING_TIME_HISTORY, label="Average Processing Time", color='orange')
     plt.title("Average Processing Time Over Time")
     plt.xlabel("Time (seconds)")
-    plt.ylabel("Avg Processing Time (s)")
+    plt.ylabel("Avg Processing Time (ms)")
     
     plt.subplot(313) 
     plt.plot(TIME_HISTORY, CPU_HISTORY, label="CPU Usage", color='green')
@@ -41,8 +41,9 @@ def update_plot():
 def main_monitor():
     initialize_database("main.db")
     plt.ion()
+    plt.figure(figsize=(10,6))
     while True:
-        time.sleep(10)
+        time.sleep(5)
         collected_data = read_all_databases_and_collect_data()
         
         current_time = time.time()
@@ -132,7 +133,7 @@ def initialize_database(db_path):
 def calculate_average_processing_time(total_processing_time, packets_processed):
     """Calculate the average processing time."""
     if packets_processed > 0:
-        return total_processing_time / packets_processed
+        return total_processing_time / packets_processed * 1000
     return 0.0
 
 

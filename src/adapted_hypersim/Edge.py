@@ -144,12 +144,12 @@ class Edge:
     def monitor_udp(self):
         """Main monitoring loop."""
         while self.monitor_flag:
-            time.sleep(10)
+            time.sleep(5)
 
             with self.monitor_lock:
                 avg_processing_time = calculate_average_processing_time(
                     self.total_processing_time, self.packets_processed)
-                cpu_usage = psutil.cpu_percent()
+                cpu_usage = psutil.cpu_percent(5)
 
                 record_metrics_in_database(
                     self.db_path,
