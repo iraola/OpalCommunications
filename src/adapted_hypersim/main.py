@@ -63,6 +63,11 @@ def get_json_data(monitor):
         with open(adr_edge, 'r') as file:
             # Llegir el contingut del fitxer
             data = json.load(file)
+            if 'type' not in data.get('global-properties', {}) or \
+                    data['global-properties']['type'] != 'edge':
+                print(
+                    f"Skipping file {adr_edge}: 'type' is not 'edge' or missing.")
+                continue
             edge_name = data['global-properties']['label']
             tcp_sensors_port = data['global-properties']['comms']['opal-tcp']['sensors']['port']
             udp_sensors_port = data['global-properties']['comms']['opal-udp']['sensors']['port']
